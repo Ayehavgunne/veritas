@@ -1,0 +1,276 @@
+from .results import Results
+from .column import Column
+from .statements import Select
+from .statements import Tuple
+from .statements import Create
+from .statements import Update
+from .statements import Delete
+from .statements import Insert
+from .types import Varchar
+from .types import Percent
+from .types import Integer
+from .types import Numeric
+from .types import Money
+from .types import Boolean
+from .types import Date
+from .types import Timestamp
+from .types import Time
+from .types import Interval
+from tabularpy.util import select_column_names_sql
+from tabularpy.util import select_types_sql
+from tabularpy.util import select_pkey_sql
+from tabularpy.util import select_index_sql
+from tabularpy.util import select_not_nullable_sql
+from tabularpy.util import select_contraints_sql
+
+
+class Table(object):
+	def __init__(self, name, parent):
+		self.name = name
+		self.parent = parent
+		self.columns = []
+		self.primary_keys = []
+		self.indexes = []
+		self.uniques = []
+		self.args = []
+		self.c = None
+		self.data = None
+
+	def reflect(self):
+		self.reflect_column_types()
+		self.reflect_primary_keys()
+		self.reflect_indexes()
+		self.reflect_not_nullables()
+		self.reflect_constraints()
+		self.c = Columns(self.columns)
+
+	def results(self):
+		return Results(self)
+
+	def get_column_names(self):
+		return (column.name for column in self.columns)
+
+	def get_column_types(self):
+		return {column.name: column.type_ for column in self.columns}
+
+	def get_pkey_columns(self):
+		return (self.get_column(name) for name in self.primary_keys)
+
+	def get_index_columns(self):
+		return (self.get_column(name) for name in self.indexes)
+
+	def get_unique_columns(self):
+		return (self.get_column(name) for name in self.uniques)
+
+	def query_column_names(self):
+		with self.parent.cursor_manager() as cursor:
+			cursor.execute(select_column_names_sql.format(self.name))
+			return (row[0] for row in cursor.fetchall())
+
+	def query_column_types(self):
+		with self.parent.cursor_manager() as cursor:
+			cursor.execute(select_types_sql.format(self.name))
+			return {row[0]: row[1] for row in cursor.fetchall()}
+
+	def reflect_column_types(self):
+		self.columns = []
+		for name, col_type in self.query_column_types().items():
+			col_type = col_type.lower()
+			if 'varchar' in name or 'character varying' in col_type:
+				type_ = Varchar()
+			elif col_type == 'integer':
+				type_ = Integer()
+			elif 'numeric' in col_type:
+				type_ = Numeric()
+			elif col_type == 'percent':
+				type_ = Percent()
+			elif col_type == 'money':
+				type_ = Money()
+			elif col_type == 'boolean':
+				type_ = Boolean()
+			elif col_type == 'date':
+				type_ = Date()
+			elif 'timestamp' in col_type:
+				type_ = Timestamp()
+			elif 'time' in col_type:
+				type_ = Time()
+			elif col_type == 'interval':
+				type_ = Interval()
+			else:
+				type_ = Varchar()
+			self.columns.append(Column(name, type_))
+
+	def query_primary_keys(self):
+		with self.parent.cursor_manager() as cursor:
+			cursor.execute(select_pkey_sql.format(self.name))
+			return (row[0] for row in cursor.fetchall())
+
+	def reflect_primary_keys(self):
+		self.primary_keys = list(self.query_primary_keys())
+
+	def query_indexes(self):
+		with self.parent.cursor_manager() as cursor:
+			cursor.execute(select_index_sql.format(self.name))
+			return (row[0] for row in cursor.fetchall())
+
+	def reflect_indexes(self):
+		self.indexes = list(self.query_indexes())
+
+	def query_not_nullables(self):
+		with self.parent.cursor_manager() as cursor:
+			cursor.execute(select_not_nullable_sql.format(self.name))
+			return (row[0] for row in cursor.fetchall())
+
+	def reflect_not_nullables(self):
+		for name in self.query_not_nullables():
+			self.get_column(name).nullable = False
+
+	def query_constraints(self):
+		with self.parent.cursor_manager() as cursor:
+			cursor.execute(select_contraints_sql.format(self.name))
+			return {row[0]: row[1] for row in cursor.fetchall()}
+
+	def reflect_constraints(self):
+		self.uniques = []
+		for name, constraint in self.query_constraints().items():
+			column = self.get_column(name)
+			if constraint == 'UNIQUE':
+				column.unique = True
+				self.uniques.append(name)
+			# TODO: Add more constraint types
+
+	def add_table_data(self, data):
+		self.data = data
+
+	def _has_column(self, name):
+		for column in self.columns:
+			if column.name == name:
+				return True
+		return False
+
+	# noinspection PyProtectedMember
+	def _has_row(self, row_num):
+		if self.data:
+			return self.data._has_row(row_num)
+
+	# noinspection PyProtectedMember
+	def change_cell(self, x, y, value):
+		if isinstance(y, str) and isinstance(x, int):
+			if self._has_column(y):
+				if self._has_row(x):
+					self.data._table_data[y][x] = value
+				else:
+					raise AttributeError('{} does not have row {}'.format(self, x))
+			else:
+				raise AttributeError('{} does not have column {}'.format(self, y))
+		elif isinstance(y, int) and isinstance(x, int):
+			header = self.get_column(y)
+			if self._has_row(x):
+				self.data._table_data[header][x] = value
+			else:
+				raise AttributeError('{} does not have row {}'.format(self, x))
+
+
+	def add_column(self, column):
+		column.database = self.parent
+		column.parent = self
+		self.columns.append(column)
+		if column.primary_key:
+			self.primary_keys.append(column.name)
+		if column.index:
+			self.indexes.append(column.name)
+		if column.unique:
+			self.uniques.append(column.name)
+		self.c = Columns(self.columns)
+
+	def add_primary_key(self, name):
+		self.primary_keys.append(name)
+		self.get_column(name).primary_key = True
+
+	def add_index(self, name):
+		self.indexes.append(name)
+		self.get_column(name).index = True
+
+	def set_unique(self, name):
+		self.uniques.append(name)
+		self.get_column(name).unique = True
+
+	def set_not_nullable(self, name):
+		self.get_column(name).nullable = False
+
+	def set_column_default(self, name, default):
+		self.get_column(name).default = default
+
+	def get_column(self, name):
+		for column in self.columns:
+			if column.name == name:
+				return column
+
+	def column_exists(self, name):
+		for column in self.columns:
+			if column.name == name:
+				return True
+		return False
+
+	def create(self):
+		return Create(self)
+
+	def select(self, *columns):
+		return Select(self, *columns)
+
+	def insert(self):
+		if not self.data:
+			raise AttributeError('The table must have data to insert with first')
+		return Insert(self)
+
+	def update(self):
+		if not self.data:
+			raise AttributeError('The table must have data to update with first')
+		return Update(self)
+
+	def upsert(self, *on):
+		if not self.data:
+			raise AttributeError('The table must have data to upsert with first')
+		if len(on) > 1:
+			self.select(*on).where(self.tuple_(*on).in_(self.data.to_list_of_tuples(*on)))
+
+	def delete(self, cascaded=False):
+		return Delete(self, cascaded)
+
+	def tuple_(self, *columns):
+		return Tuple(self, *columns)
+
+	def __str__(self):
+		sql = 'CREATE TABLE {} (\n'.format(self.name)
+		for column in self.columns:
+			sql = '{}\t{},\n'.format(sql, column)
+		sql = '{}\n);'.format(sql[:-2])
+		if self.primary_keys:
+			sql = '{}\nCONSTRAINT {}_pkey PRIMARY KEY ('.format(sql, self.name)
+			for pkey in self.primary_keys:
+				sql = '{}{}, '.format(sql, pkey)
+			sql = '{});'.format(sql[:-2])
+		if self.uniques:
+			for unique in self.uniques:
+				sql = '{0}\nCONSTRAINT {1}_{2}_key UNIQUE ({2});'.format(sql, self.name, unique)
+		if self.indexes:
+			for index in self.indexes:
+				sql = '{0}\nCREATE INDEX {1}_{2}_idx ON {1} USING btree ({2});'.format(sql, self.name, index)
+		return sql
+
+
+class Columns(object):
+	def __init__(self, columns):
+		self.columns = columns
+
+	def __getattr__(self, item):
+		return self._get(item)
+
+	def __getitem__(self, item):
+		return self._get(item)
+
+	def _get(self, item):
+		for column in self.columns:
+			if item == column.name:
+				return column
+		raise AttributeError

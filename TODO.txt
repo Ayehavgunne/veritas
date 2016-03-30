@@ -1,0 +1,19 @@
+Tables
+TODO: Consider cacheing the cell objects in the table itself after they have been created and then access them directly instead of creating them over and over
+TODO: Look into generators instead of consuming the entire object at once. Example: a huge CSV file
+
+	to_excel
+	TODO: add label output
+
+	to_csv
+	TODO: add label output
+
+	_has_row
+	TODO: allow for checking row by label
+
+    pprint
+    TODO: add optional footer printing
+
+Cells
+TODO: Create BytesCell
+TODO: Create PhoneNumCell
