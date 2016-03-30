@@ -140,7 +140,12 @@ class Table(object):
 			# TODO: Add more constraint types
 
 	def add_table_data(self, data):
+		for header in data.headers:
+			if not self._has_column(header):
+				raise ValueError('Columns do not match')
 		self.data = data
+		self.data.sql_table = self
+		self.data.reflect()
 
 	def _has_column(self, name):
 		for column in self.columns:
@@ -169,7 +174,6 @@ class Table(object):
 				self.data._table_data[header][x] = value
 			else:
 				raise AttributeError('{} does not have row {}'.format(self, x))
-
 
 	def add_column(self, column):
 		column.database = self.parent
@@ -232,7 +236,13 @@ class Table(object):
 		if not self.data:
 			raise AttributeError('The table must have data to upsert with first')
 		if len(on) > 1:
-			self.select(*on).where(self.tuple_(*on).in_(self.data.to_list_of_tuples(*on)))
+			us = self.update().where(self.tuple_(*on).in_(self.data.to_list_of_tuples(*on)))
+			print(us)
+			us.execute()
+		else:
+			us = self.update().where(on[0].in_(self.data.to_list_of_tuples(on[0])))
+			print(us)
+			us.execute()
 
 	def delete(self, cascaded=False):
 		return Delete(self, cascaded)

@@ -2,7 +2,7 @@ from .types import Varchar
 from .types import Date
 from .types import Time
 from .types import Timestamp
-from .operators import operators
+from .operators import operators, In
 from .operators import Equals
 from .operators import NotEquals
 from .operators import LessThan
@@ -25,6 +25,8 @@ class Condition(object):
 				elif token in operators:
 					if token == 'IS':
 						self.tokens[x] = Is()
+					elif token == 'IN':
+						self.tokens[x] = In()
 					elif token == '=':
 						self.tokens[x] = Equals()
 					elif token == '!=':
@@ -44,9 +46,11 @@ class Condition(object):
 		for x in reversed(range(len(self.tokens))):
 			if x != 0:
 				self.tokens.insert(x, Whitespace())
+		pass
 
 	def __str__(self):
 		return ''.join([str(token) for token in self.tokens])
+
 
 class ConditionLogic(object):
 	def __init__(self, *conditions):

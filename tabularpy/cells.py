@@ -25,7 +25,7 @@ def get_cell_of_type(type_desc):
 			return IntCell
 		elif type_desc == 'float':
 			return FloatCell
-		elif type_desc == 'decimal':
+		elif type_desc == 'decimal' or type_desc == 'numeric':
 			return DecimalCell
 		elif type_desc == 'percent':
 			return PercentCell
@@ -984,7 +984,7 @@ class IntCell(BaseCell):
 	def __str__(self):
 		if self.value is not None:
 			if self._settings.int_comma and self.header not in self._settings.dont_format:
-				return locale.format('%d', self.value, grouping=True)
+				return '{:,}'.format(self.value)
 			else:
 				return str(self.value)
 		else:
@@ -1357,6 +1357,15 @@ class FloatCell(BaseCell):
 			else:
 				return self._new(self._base.__rtruediv__(self.value, other))
 
+	def __str__(self):
+		if self.value is not None:
+			if self._settings.float_comma and self.header not in self._settings.dont_format:
+				return '{:,}'.format(self.value)
+			else:
+				return str(self.value)
+		else:
+			return 'None'
+
 	def __sub__(self, other):
 		if self.value is None and self._settings.ignore_none:
 			return self._new(self.value)
@@ -1707,6 +1716,15 @@ class DecimalCell(BaseCell):
 				return self._new(other.value / self.value)
 			else:
 				return self._new(self._base.__rtruediv__(self.value, other))
+
+	def __str__(self):
+		if self.value is not None:
+			if self._settings.dec_comma and self.header not in self._settings.dont_format:
+				return '{:,}'.format(self.value)
+			else:
+				return str(self.value)
+		else:
+			return 'None'
 
 	def __sub__(self, other):
 		if self.value is None and self._settings.ignore_none:

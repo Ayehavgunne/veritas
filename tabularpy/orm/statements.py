@@ -139,6 +139,8 @@ class OrderBy(Statement):
 class Tuple(Statement):
 	def __init__(self, table, *columns):
 		super().__init__(table)
+		for column in columns:
+			print(column.name)
 		self.sql = '({})'.format(', '.join(column.name for column in columns))
 
 	def in_(self, iterable):

@@ -129,6 +129,10 @@ class BaseTable(metaclass=ABCMeta):
 	def keys(self):
 		return self.headers
 
+	def reflect(self):
+		for name, type_ in self.sql_table.get_column_types().items():
+			self.column_types[name] = str(type_).lower()
+
 	def add_column(self, column, name, col_type=None, prepend=False):
 		if self._has_column(name):
 			raise ValueError('{} already exists in table'.format(name))
@@ -516,20 +520,11 @@ class BaseTable(metaclass=ABCMeta):
 	def pprint(self, num_rows=None):
 		col_lengths = [0 for _ in range(self.num_cols)]
 		if num_rows:
-			num_rows -= 1
-		if self.labels.count(None) != len(self.labels):
-			row_num_length = 0
-			for i, label in enumerate(self.labels):
-				if len(label) > row_num_length:
-					row_num_length = len(label)
-				if num_rows:
-					if i >= num_rows:
-						break
+			row_num_length = len(str(num_rows + 1))
 		else:
-			if num_rows:
-				row_num_length = len(str(num_rows + 1))
-			else:
-				row_num_length = len(str(self.num_rows + 1))
+			row_num_length = len(str(self.num_rows + 1))
+		if row_num_length < 4:
+			row_num_length = 4
 		for x, header in enumerate(self.headers):
 			if len(str(header)) > col_lengths[x]:
 				col_lengths[x] = len(str(header))
@@ -537,29 +532,19 @@ class BaseTable(metaclass=ABCMeta):
 			for x, cell in enumerate(row):
 				if len(str(cell)) > col_lengths[x]:
 					col_lengths[x] = len(str(cell))
-			if num_rows:
-				if i >= num_rows:
-					break
-		table_string = '{0:{width}}'.format(' ', width=row_num_length)
+			if num_rows and i >= num_rows:
+				break
+		table_string = '{0:>{width}}'.format('row', width=row_num_length)
 		for x, header in enumerate(self.headers):
-			table_string = '{0}\t{1:>{width}}'.format(str(table_string), str(header), width=col_lengths[x])
-		table_string = '{}\r\n'.format(str(table_string))
-		y = 0
-		for i, row in enumerate(self):
-			if self.labels.count(None) != len(self.labels):
-				try:
-					table_string = '{0}{1:>{width}}'.format(str(table_string), str(self.labels[y]) if self.labels[y] is not None else '', width=row_num_length)
-				except IndexError:
-					table_string = '{0}{1:>{width}}'.format(str(table_string), '', width=row_num_length)
-			else:
-				table_string = '{0}{1:>{width}}'.format(str(table_string), str(y + 1), width=row_num_length)
+			table_string = '{0}\t{1:>{width}}'.format(table_string, header, width=col_lengths[x])
+		table_string = '{}\r\n'.format(table_string)
+		for i, row in enumerate(self, 1):
+			table_string = '{0}{1:>{width}}'.format(table_string, i, width=row_num_length)
 			for x, cell in enumerate(row):
-				table_string = '{0}\t{1:>{width}}'.format(str(table_string), str(cell), width=col_lengths[x])
-			table_string = '{}\r\n'.format(str(table_string))
-			y += 1
-			if num_rows:
-				if i >= num_rows:
-					break
+				table_string = '{0}\t{1:>{width}}'.format(table_string, str(cell), width=col_lengths[x])
+			table_string = '{}\r\n'.format(table_string)
+			if num_rows and i >= num_rows:
+				break
 		return table_string
 
 	def to_dicts(self, *columns):
@@ -1008,9 +993,9 @@ class BaseTable(metaclass=ABCMeta):
 				else:
 					return self.copy()
 			else:
-				raise ValueError('Columns of each object do not match')
+				raise ValueError('Columns do not match')
 		else:
-			raise TypeError('unsupported operand type(s) for +: \'Table\' and {}'.format(type(other)))
+			raise TypeError("unsupported operand type(s) for +: 'Table' and {}".format(type(other)))
 
 	def __sub__(self, other):
 		if isinstance(other, BaseTable):

@@ -24,13 +24,19 @@ class In(Operator):
 		values = ''
 		for value in self.operator:
 			if isinstance(value, (list, set, tuple)):
-				values = '{}('.format(values)
-				for val in value:
-					if isinstance(val, (cells.StrCell, cells.DateCell, cells.TimeCell, cells.TimestampCell)):
-						values = "{}'{}', ".format(values, val)
+				if len(value) > 1:
+					values = '{}('.format(values)
+					for val in value:
+						if isinstance(val, (cells.StrCell, cells.DateCell, cells.TimeCell, cells.TimestampCell)):
+							values = "{}'{}', ".format(values, val)
+						else:
+							values = '{}{}, '.format(values, val)
+					values = '{}), '.format(values[:-2])
+				else:
+					if isinstance(value, (cells.StrCell, cells.DateCell, cells.TimeCell, cells.TimestampCell)):
+						values = "{}'{}', ".format(values, value[0])
 					else:
-						values = '{}{}, '.format(values, val)
-				values = '{}), '.format(values[:-2])
+						values = '{}{}, '.format(values, value[0])
 			else:
 				if isinstance(value, (cells.StrCell, cells.DateCell, cells.TimeCell, cells.TimestampCell)):
 					values = "{}'{}', ".format(values, value)
