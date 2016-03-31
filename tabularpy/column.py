@@ -1,5 +1,5 @@
 from decimal import Decimal
-from . import default_settings
+from . import Settings
 from .cells import get_cell_of_type
 from .cells import BaseCell
 from .cells import StrCell
@@ -8,7 +8,7 @@ from .cells import StrCell
 class Col(object):
 	__slots__ = ('cells', 'labels', 'column_type', 'header', 'col_num', '_parent', '_i', '_settings')
 
-	def __init__(self, cells, labels, column_type, header, col_num, parent, settings=default_settings):
+	def __init__(self, cells, labels, column_type, header, col_num, parent, settings=Settings()):
 		self.cells = cells
 		self.labels = labels
 		self.column_type = column_type

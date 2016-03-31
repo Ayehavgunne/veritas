@@ -17,12 +17,13 @@ class Is(Operator):
 
 
 class In(Operator):
-	def __init__(self, operator):
-		super().__init__(operator)
+	def __init__(self, iterable):
+		super().__init__('IN')
+		self.iterable = iterable
 
 	def __str__(self):
 		values = ''
-		for value in self.operator:
+		for value in self.iterable:
 			if isinstance(value, (list, set, tuple)):
 				if len(value) > 1:
 					values = '{}('.format(values)

@@ -4,6 +4,7 @@ from .conditions import And
 from .conditions import Not
 from .conditions import Or
 
+
 class Database(object):
 	def __init__(self, connection=None, log=None):
 		self.connection = connection
@@ -52,6 +53,18 @@ class Database(object):
 				"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
 			)
 			return tuple(table[0] for table in cursor.fetchall())
+
+	def get_current_seq_val(self, name):
+		with self.cursor_manager() as cursor:
+			# noinspection SqlResolve
+			cursor.execute('SELECT last_value FROM {};'.format(name))
+			return cursor.fetchone()[0]
+
+	def get_next_seq_val(self, name):
+		with self.cursor_manager() as cursor:
+			# noinspection SqlResolve
+			cursor.execute("SELECT nextval('{}');".format(name))
+			return cursor.fetchone()[0]
 
 	def add_table(self, table):
 		table.parent = self

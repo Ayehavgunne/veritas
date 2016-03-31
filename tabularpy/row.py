@@ -1,7 +1,7 @@
 import inspect
 from decimal import Decimal
 from .orm.column import Column
-from . import default_settings
+from . import Settings
 from .cells import get_cell_of_type
 from .cells import BaseCell
 from .cells import StrCell
@@ -10,7 +10,7 @@ from .cells import StrCell
 class Row(object):
 	__slots__ = ('cells', 'headers', 'column_types', 'row_num', 'label', '_parent', '_i', '_settings')
 
-	def __init__(self, cells, headers, column_types, row_num, parent, label=None, settings=default_settings):
+	def __init__(self, cells, headers, column_types, row_num, parent, label=None, settings=Settings()):
 		self.cells = cells
 		self.headers = headers
 		self.column_types = column_types
@@ -103,8 +103,8 @@ class Row(object):
 				idx = self.headers.index(item.name)
 				return self.get_cell(idx)
 		else:
-			raise TypeError('cannot access items of {} with type {} ({})'.format(self, type(item), item))
-		raise AttributeError('{} does not have item of {}'.format(self, item))
+			raise TypeError('Cannot access items with type {}'.format(type(item), item))
+		raise ValueError('Row does not have item {}'.format(item))
 
 	def __setitem__(self, key, value):
 		if isinstance(key, BaseCell):

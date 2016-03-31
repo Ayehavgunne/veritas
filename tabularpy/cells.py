@@ -7,7 +7,7 @@ from datetime import datetime
 from datetime import date
 from datetime import time
 from datetime import timedelta
-from . import default_settings
+from . import Settings
 from .util import datetime_to_quarter
 from .util import seconds_since_epoch
 from .util import parse_time_delta
@@ -21,7 +21,7 @@ def get_cell_of_type(type_desc):
 		type_desc = str(type_desc).lower()
 		if type_desc == 'string' or type_desc == 'varchar':
 			return StrCell
-		elif type_desc == 'integer':
+		elif type_desc == 'integer' or type_desc == 'bigint':
 			return IntCell
 		elif type_desc == 'float':
 			return FloatCell
@@ -48,7 +48,7 @@ def get_cell_of_type(type_desc):
 class BaseCell(metaclass=ABCMeta):
 	__slots__ = ('_base', 'value', 'header', 'label', 'column_type', 'row_num', 'col_num', '_parent', '_settings', 'getquoted')
 
-	def __init__(self, base, value, header=None, label=None, column_type='string', row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, base, value, header=None, label=None, column_type='string', row_num=None, col_num=None, parent=None, settings=Settings()):
 		self._base = base
 		self.header = header
 		self.label = label
@@ -186,7 +186,7 @@ class BaseCell(metaclass=ABCMeta):
 class StrCell(BaseCell):
 	__slots__ = ('_i',)
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		super().__init__(str, value, header, label, 'string', row_num, col_num, parent, settings)
 		self._i = 0
 
@@ -525,7 +525,7 @@ class StrCell(BaseCell):
 class IntCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		super().__init__(int, value, header, label, 'integer', row_num, col_num, parent, settings)
 
 	def __abs__(self):
@@ -1064,7 +1064,7 @@ class IntCell(BaseCell):
 class FloatCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		super().__init__(float, value, header, label, 'float', row_num, col_num, parent, settings)
 
 	def __abs__(self):
@@ -1424,7 +1424,7 @@ class FloatCell(BaseCell):
 class DecimalCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		super().__init__(Decimal, value, header, label, 'decimal', row_num, col_num, parent, settings)
 
 	def __abs__(self):
@@ -2011,7 +2011,7 @@ class DecimalCell(BaseCell):
 class PercentCell(DecimalCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, str):
 			if '%' in value:
 				value = value.replace('%', '')
@@ -2030,7 +2030,7 @@ class PercentCell(DecimalCell):
 class MoneyCell(DecimalCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, str):
 			value = value.replace('$', '')
 			value = value.replace(',', '')
@@ -2050,7 +2050,7 @@ class MoneyCell(DecimalCell):
 class BooleanCell(IntCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, str):
 			if value.lower() == 'false':
 				value = False
@@ -2068,7 +2068,7 @@ class BooleanCell(IntCell):
 class DateCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		value = parse_date_time_string(value, settings.date_format)
 		super().__init__(date, value, header, label, 'date', row_num, col_num, parent, settings)
 
@@ -2251,7 +2251,7 @@ class DateCell(BaseCell):
 class TimeCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		value = parse_date_time_string(value, settings.time_format)
 		super().__init__(time, value, header, label, 'time', row_num, col_num, parent, settings)
 
@@ -2366,7 +2366,7 @@ class TimeCell(BaseCell):
 class SecondsCell(IntCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, datetime):
 			value = seconds_since_epoch(value)
 		elif isinstance(value, str):
@@ -2378,7 +2378,7 @@ class SecondsCell(IntCell):
 class TimestampCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		value = parse_date_time_string(value, settings.datetime_format)
 		super().__init__(datetime, value, header, label, 'timestamp', row_num, col_num, parent, settings)
 
@@ -2617,7 +2617,7 @@ class TimestampCell(BaseCell):
 class IntervalCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, str):
 			value = parse_time_delta(value)
 		super().__init__(timedelta, value, header, label, 'interval', row_num, col_num, parent, settings)
@@ -2913,7 +2913,7 @@ class IntervalCell(BaseCell):
 class ListCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=default_settings):
+	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		super().__init__(list, value, header, label, 'list', row_num, col_num, parent, settings)
 
 	def __add__(self, other):

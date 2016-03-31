@@ -10,6 +10,7 @@ from datetime import timedelta
 from decimal import Decimal
 from functools import reduce
 from os.path import isfile
+from . import Settings
 from .orm.conditions import Condition
 from .orm.conditions import ConditionLogic
 from .orm.conditions import And
@@ -18,7 +19,6 @@ from .orm.conditions import Not
 from .orm.conditions import ColRef
 from .orm.conditions import Operand
 from .orm.operators import Operator
-from . import default_settings
 from .cells import StrCell
 from .cells import get_cell_of_type
 from .column import Col
@@ -49,7 +49,7 @@ class BaseTable(metaclass=ABCMeta):
 		'_settings',
 	)
 
-	def __init__(self, headers=None, labels=None, footers=None, column_types=None, name=None, settings=default_settings):
+	def __init__(self, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
 		self.headers = headers or []
 		self.labels = labels or []
 		self.footers = footers or []
@@ -241,12 +241,10 @@ class BaseTable(metaclass=ABCMeta):
 				self.column_types[key] = 'interval'
 			elif 'int' in datatype or 'num' in datatype:
 				self.column_types[key] = 'integer'
-			elif 'flo' in datatype or 'numeric' in datatype:
-				self.column_types[key] = 'float'
-			elif 'dec' in datatype:
-				self.column_types[key] = 'decimal'
+			elif 'dec' in datatype or 'flo' in datatype or 'numeric' in datatype:
+				self.column_types[key] = 'numeric'
 			elif 'varchar' in datatype or 'character var' in datatype or 'str' in datatype or 'text' in datatype:
-				self.column_types[key] = 'string'
+				self.column_types[key] = 'varchar'
 			elif 'datetimesec' in datatype or 'second' in datatype:
 				self.column_types[key] = 'seconds'
 			elif 'date' in datatype:
@@ -276,7 +274,7 @@ class BaseTable(metaclass=ABCMeta):
 					val = str(cell.value)
 					if ('/' in val or '-' in val) and ':' in val:
 						self.column_types[cell.header] = 'timestamp'
-					elif val[0] != '-' and ('/' in val or '-' in val) and not re.search('[a-zA-Z]', val):
+					elif val[0] != '-' and ('/' in val or '-' in val) and not re.search('[a-zA-Z]', val) and (len(val) == 10 or len(val) == 8):
 						self.column_types[cell.header] = 'date'
 					elif ':' in val:
 						self.column_types[cell.header] = 'time'
@@ -284,12 +282,21 @@ class BaseTable(metaclass=ABCMeta):
 						self.column_types[cell.header] = 'money'
 					elif '%' in val:
 						self.column_types[cell.header] = 'percent'
-					elif '.' in val and val.replace('.', '').isdecimal() and val.count('.') == 1:
-						self.column_types[cell.header] = 'decimal'
-					elif val.isnumeric():
-						self.column_types[cell.header] = 'integer'
+					elif '.' in val and val.replace('.', '').replace('-', '').isdecimal() and val.count('.') == 1:
+						self.column_types[cell.header] = 'numeric'
+					elif val.replace('-', '').isnumeric() and (val.count('-') == 0 or (val.count('-') == 1 and val[1] == '-')):
+						type_string = 'integer'
+						col = self[cell.header]
+						for row in col:
+							if '.' in row and row.replace('.', '').replace('-', '').isdecimal() and row.count('.') == 1:
+								type_string = 'numeric'
+								break
+							elif int(row) < -2147483648 or int(row) > 2147483647:
+								type_string = 'bigint'
+								break
+						self.column_types[cell.header] = type_string
 					else:
-						self.column_types[cell.header] = 'string'
+						self.column_types[cell.header] = 'varchar'
 						pass
 
 	def rename_column(self, old_column, new_column):
@@ -478,7 +485,7 @@ class BaseTable(metaclass=ABCMeta):
 				val = token.operand
 			else:
 				continue
-		val = get_cell_of_type(table.column_types[col])(val, col, None, table.column_types[col], None, None, default_settings)
+		val = get_cell_of_type(table.column_types[col])(val, col, None, table.column_types[col], None, None, Settings())
 		if operator == '=' or operator == 'IS':
 			for row in reversed(table):
 				if not row[col] == val:
@@ -651,35 +658,36 @@ class BaseTable(metaclass=ABCMeta):
 				ws.cell(column=y, row=lastrow).alignment = Alignment(horizontal='right')
 		return wb
 
-	def to_csv(self, footer=True, handle_none=False):
-		csvstring = ''
-		if self.headers:
-			for header in self.headers:
-				header = str(header)
-				if ',' in header:
-					csvstring = '{}"{}",'.format(csvstring, header)
+	def to_csv(self, header=True, footer=False, handle_none=False):
+		header_string = ''
+		if self.headers and header:
+			for head in self.headers:
+				head = str(head)
+				if ',' in head:
+					header_string = '{}"{}",'.format(header_string, head)
 				else:
-					csvstring = '{}{},'.format(csvstring, header)
-		csvstring = '{}\n'.format(csvstring[:-1])
+					header_string = '{}{},'.format(header_string, head)
+			header_string = '{}\n'.format(header_string[:-1])
+		csv_string = '{}'.format(header_string)
 		for row in self:
 			for cell in row:
 				if handle_none and cell.value is None:
 					cell = ''
 				cell = str(cell)
 				if ',' in cell:
-					csvstring = '{}"{}",'.format(csvstring, cell)
+					csv_string = '{}"{}",'.format(csv_string, cell)
 				else:
-					csvstring = '{}{},'.format(csvstring, cell)
-			csvstring = '{}\n'.format(csvstring[:-1])
+					csv_string = '{}{},'.format(csv_string, cell)
+			csv_string = '{}\n'.format(csv_string[:-1])
 		if self.footers and footer:
 			for footer in self.footers:
 				footer = str(footer)
 				if ',' in footer:
-					csvstring = '{}"{}",'.format(csvstring, footer)
+					csv_string = '{}"{}",'.format(csv_string, footer)
 				else:
-					csvstring = '{}{},'.format(csvstring, footer)
-			csvstring = '{}\n'.format(csvstring[:-1])
-		return csvstring
+					csv_string = '{}{},'.format(csv_string, footer)
+			csv_string = '{}\n'.format(csv_string[:-1])
+		return csv_string
 
 	def to_json_string(self, json_type='array_of_objects'):
 		if json_type == 'array_of_objects':
@@ -1041,12 +1049,16 @@ class BaseTable(metaclass=ABCMeta):
 
 
 class CsvTable(BaseTable):
-	def __init__(self, file_path, headers=None, labels=None, footers=None, column_types=None, name=None, settings=default_settings):
+	def __init__(self, file_path, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(headers, labels, footers, column_types, name, settings)
-		if isfile(file_path):
-			with open(file_path) as open_file:
-				self._setup(open_file)
-		else:
+		# noinspection PyBroadException
+		try:
+			if isfile(file_path):
+				with open(file_path) as open_file:
+					self._setup(open_file)
+			else:
+				raise ValueError
+		except Exception:
 			with io.StringIO(file_path) as open_file:
 				self._setup(open_file)
 
@@ -1091,7 +1103,7 @@ class CsvTable(BaseTable):
 
 
 class ExcelTable(BaseTable):
-	def __init__(self, file_path, worksheet=0, headers=None, labels=None, footers=None, column_types=None, name=None, settings=default_settings):
+	def __init__(self, file_path, worksheet=0, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(headers, labels, footers, column_types, name, settings)
 		self._setup(file_path)
 		self.worksheet = worksheet
@@ -1165,7 +1177,7 @@ class ExcelTable(BaseTable):
 class SqlAlcTable(BaseTable):
 	__slots__ = 'query'
 
-	def __init__(self, result, query=None, labels=None, footers=None, column_types=None, name=None, settings=default_settings):
+	def __init__(self, result, query=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(None, labels, footers, column_types, name, settings)
 		self.query = query
 		self._setup(result)
@@ -1191,7 +1203,7 @@ class SqlAlcTable(BaseTable):
 class HtmlTable(BaseTable):
 	__slots__ = '_parser'
 
-	def __init__(self, html, parser=BeautifulSoupParser().parse, labels=None, footers=None, column_types=None, name=None, settings=default_settings):
+	def __init__(self, html, parser=BeautifulSoupParser().parse, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(None, labels, footers, column_types, name, settings)
 		self._parser = parser
 		self._setup(html)
@@ -1202,7 +1214,7 @@ class HtmlTable(BaseTable):
 
 
 class ListOfListsTable(BaseTable):
-	def __init__(self, lists, headers=None, labels=None, footers=None, column_types=None, name=None, settings=default_settings):
+	def __init__(self, lists, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(headers, labels, footers, column_types, name, settings)
 		self._setup(lists)
 
@@ -1216,7 +1228,7 @@ class ListOfListsTable(BaseTable):
 
 
 class ListOfDictsTable(BaseTable):
-	def __init__(self, dicts, labels=None, footers=None, column_types=None, name=None, settings=default_settings):
+	def __init__(self, dicts, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(None, labels, footers, column_types, name, settings)
 		self._setup(dicts)
 
@@ -1235,7 +1247,7 @@ class ListOfDictsTable(BaseTable):
 
 
 class EmptyTable(BaseTable):
-	def __init__(self, headers=None, labels=None, footers=None, column_types=None, name=None, settings=default_settings):
+	def __init__(self, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(headers, labels, footers, column_types, name, settings)
 		self._setup(None)
 

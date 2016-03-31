@@ -36,6 +36,11 @@ class Integer(Type):
 		return 'INTEGER'
 
 
+class BigInt(Type):
+	def __str__(self):
+		return 'BIGINT'
+
+
 class Boolean(Type):
 	def __str__(self):
 		return 'BOOLEAN'

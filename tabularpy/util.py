@@ -415,6 +415,42 @@ WHERE
 	i.indisprimary;'''
 
 # noinspection SqlResolve
+select_serial_sql = '''WITH sequences AS (
+	SELECT
+		oid,
+		relname AS sequencename
+	FROM
+		pg_class
+	WHERE
+		relkind = 'S'
+)
+SELECT
+	col.attname AS columnname,
+	seqs.sequencename
+FROM
+	pg_attribute col
+JOIN
+	pg_class tab ON col.attrelid = tab.oid
+JOIN
+	pg_namespace sch ON tab.relnamespace = sch.oid
+LEFT JOIN
+	pg_attrdef def ON tab.oid = def.adrelid AND
+	col.attnum = def.adnum
+LEFT JOIN
+	pg_depend deps ON def.oid = deps.objid AND
+	deps.deptype = 'n'
+LEFT JOIN
+	sequences seqs ON deps.refobjid = seqs.oid
+WHERE
+	tab.relname = '{}' AND
+	sch.nspname != 'information_schema' AND
+	sch.nspname NOT LIKE 'pg_%' AND
+	col.attnum > 0 AND
+	seqs.sequencename IS NOT NULL
+ORDER BY
+	col.attname;'''
+
+# noinspection SqlResolve
 select_index_sql = '''SELECT
 	a.attname
 FROM

@@ -12,6 +12,8 @@ class Column(object):
 		self.name = name
 		self.type_ = type_
 		self.primary_key = primary_key
+		self.serial = None
+		self.serial_val = 1
 		self.index = index
 		self.unique = unique
 		self.nullable = nullable
@@ -83,7 +85,7 @@ class Column(object):
 		return Condition('{} IS NOT LIKE {}'.format(self.name, what), self)
 
 	def in_(self, iterable):
-		return Condition('{} {}'.format(self.name, In(iterable)), self)
+		return '{} {}'.format(self.name, In(iterable))
 
 	def change_type(self, type_):
 		self.type_ = type_

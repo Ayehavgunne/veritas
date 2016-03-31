@@ -13,20 +13,17 @@ from .operators import Operator
 from .operators import Is
 
 
+# TODO: Redo the whole conditions scheme. I think it is only important for querying data tables, unimportant for sql.
 class Condition(object):
 	def __init__(self, condition, *columns):
 		self.tokens = condition.split(' ')
 		for x, token in enumerate(self.tokens):
 			for column in columns:
-				if token == column.name:
-					self.tokens[x] = ColRef(column)
-				elif token == '*':
-					self.tokens[x] = Wildcard()
-				elif token in operators:
+				if token in operators:
 					if token == 'IS':
 						self.tokens[x] = Is()
 					elif token == 'IN':
-						self.tokens[x] = In()
+						self.tokens[x] = In(columns)
 					elif token == '=':
 						self.tokens[x] = Equals()
 					elif token == '!=':
@@ -41,6 +38,11 @@ class Condition(object):
 						self.tokens[x] = GreaterThanEquals()
 					else:
 						self.tokens[x] = Operator(token)
+				elif hasattr(column, 'name'):
+					if token == column.name:
+						self.tokens[x] = ColRef(column)
+				elif token == '*':
+					self.tokens[x] = Wildcard()
 				else:
 					self.tokens[x] = Operand(token, column.type_)
 		for x in reversed(range(len(self.tokens))):

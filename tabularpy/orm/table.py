@@ -7,6 +7,7 @@ from .statements import Update
 from .statements import Delete
 from .statements import Insert
 from .types import Varchar
+from .types import BigInt
 from .types import Percent
 from .types import Integer
 from .types import Numeric
@@ -17,6 +18,7 @@ from .types import Timestamp
 from .types import Time
 from .types import Interval
 from tabularpy.util import select_column_names_sql
+from tabularpy.util import select_serial_sql
 from tabularpy.util import select_types_sql
 from tabularpy.util import select_pkey_sql
 from tabularpy.util import select_index_sql
@@ -30,6 +32,7 @@ class Table(object):
 		self.parent = parent
 		self.columns = []
 		self.primary_keys = []
+		self.serials = []
 		self.indexes = []
 		self.uniques = []
 		self.args = []
@@ -39,10 +42,17 @@ class Table(object):
 	def reflect(self):
 		self.reflect_column_types()
 		self.reflect_primary_keys()
+		self.reflect_serials()
 		self.reflect_indexes()
 		self.reflect_not_nullables()
 		self.reflect_constraints()
 		self.c = Columns(self.columns)
+
+	def reflect_from_data(self):
+		if self.data:
+			data = self.data
+			for header in data.headers:
+				self.columns.append(Column(header, data.column_types[header], self, self.parent))
 
 	def results(self):
 		return Results(self)
@@ -80,6 +90,8 @@ class Table(object):
 				type_ = Varchar()
 			elif col_type == 'integer':
 				type_ = Integer()
+			elif col_type == 'bigint':
+				type_ = BigInt()
 			elif 'numeric' in col_type:
 				type_ = Numeric()
 			elif col_type == 'percent':
@@ -107,6 +119,22 @@ class Table(object):
 
 	def reflect_primary_keys(self):
 		self.primary_keys = list(self.query_primary_keys())
+
+	def query_serials(self):
+		with self.parent.cursor_manager() as cursor:
+			cursor.execute(select_serial_sql.format(self.name))
+			return {row[0]: row[1] for row in cursor.fetchall()}
+
+	def reflect_serials(self):
+		self.serials = []
+		for name, seq in self.query_serials().items():
+			self.serials.append(name)
+			with self.parent.cursor_manager() as cursor:
+				# noinspection SqlResolve
+				cursor.execute("SELECT setval('{}', COALESCE((SELECT MAX({})+1 FROM {}), 1), false);".format(seq, name, self.name))
+			col = self.get_column(name)
+			col.serial = seq
+			col.serial_val = self.parent.get_next_seq_val(seq)
 
 	def query_indexes(self):
 		with self.parent.cursor_manager() as cursor:
@@ -140,12 +168,17 @@ class Table(object):
 			# TODO: Add more constraint types
 
 	def add_table_data(self, data):
-		for header in data.headers:
-			if not self._has_column(header):
-				raise ValueError('Columns do not match')
-		self.data = data
-		self.data.sql_table = self
-		self.data.reflect()
+		if self.columns:
+			for header in data.headers:
+				if not self._has_column(header):
+					raise ValueError('Columns do not match')
+			self.data = data
+			self.data.sql_table = self
+			self.data.reflect()
+		else:
+			self.data = data
+			self.data.sql_table = self
+			self.reflect_from_data()
 
 	def _has_column(self, name):
 		for column in self.columns:
@@ -225,6 +258,7 @@ class Table(object):
 	def insert(self):
 		if not self.data:
 			raise AttributeError('The table must have data to insert with first')
+
 		return Insert(self)
 
 	def update(self):
@@ -236,13 +270,10 @@ class Table(object):
 		if not self.data:
 			raise AttributeError('The table must have data to upsert with first')
 		if len(on) > 1:
-			us = self.update().where(self.tuple_(*on).in_(self.data.to_list_of_tuples(*on)))
-			print(us)
-			us.execute()
+			self.delete().where(self.tuple_(*on).in_(self.data.to_list_of_tuples(*on))).execute()
 		else:
-			us = self.update().where(on[0].in_(self.data.to_list_of_tuples(on[0])))
-			print(us)
-			us.execute()
+			self.delete().where(on[0].in_(self.data.to_list_of_tuples(on[0]))).execute()
+		self.insert().execute()
 
 	def delete(self, cascaded=False):
 		return Delete(self, cascaded)

@@ -2,7 +2,6 @@ from tabularpy.orm import database
 from tabularpy.orm import table as tbl
 from tabularpy.orm.operators import In
 from .column import Column
-from .conditions import Condition
 
 
 class Statement(object):
@@ -17,18 +16,24 @@ class Statement(object):
 					self.sql = '{0} WHERE {1} = %({1})s'.format(self.sql, condition.name)
 				else:
 					self.sql = '{0} AND {1} = %({1})s'.format(self.sql, condition.name)
-			elif isinstance(condition, Condition):
+			else:
 				if x == 0:
 					self.sql = '{} WHERE {}'.format(self.sql, condition)
 				else:
 					self.sql = '{} AND {}'.format(self.sql, condition)
 
-	def execute(self):
-		with self.table.parent.cursor_manager() as cursor:
+	def execute(self, cursor=None):
+		if cursor:
 			if 'SELECT' in self.sql or 'DELETE' in self.sql or 'CREATE' in self.sql:
 				cursor.execute(self.sql)
 			elif self.table.data:
 				cursor.executemany(self.sql, self.table.data.to_list_of_dicts())
+		else:
+			with self.table.parent.cursor_manager() as cursor:
+				if 'SELECT' in self.sql or 'DELETE' in self.sql or 'CREATE' in self.sql:
+					cursor.execute(self.sql)
+				elif self.table.data:
+					cursor.executemany(self.sql, self.table.data.to_list_of_dicts())
 
 	def __str__(self):
 		return self.sql
@@ -83,7 +88,7 @@ class Insert(Statement):
 		values = '('
 		for column in self.table.columns:
 			# noinspection PyProtectedMember
-			if not column._ignore:
+			if not column._ignore and not column.serial:
 				columns = '{}{}, '.format(columns, column.name)
 				values = '{}%({})s, '.format(values, column.name)
 		self.sql = '{} {}) VALUES {});'.format(self.sql, columns[:-2], values[:-2])
@@ -139,9 +144,7 @@ class OrderBy(Statement):
 class Tuple(Statement):
 	def __init__(self, table, *columns):
 		super().__init__(table)
-		for column in columns:
-			print(column.name)
 		self.sql = '({})'.format(', '.join(column.name for column in columns))
 
 	def in_(self, iterable):
-		return Condition('{} {}'.format(self.sql, In(iterable)))
+		return '{} {}'.format(self.sql, In(iterable))

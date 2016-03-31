@@ -1,9 +1,4 @@
-from os import path
 from .settings import Settings
-
-default_settings = Settings()
-APP_DIR = str(path.abspath(path.dirname(__file__)))
-
 from .util import get_sql_query_types
 from .util import open_xls_as_xlsx
 from .tables import CsvTable
