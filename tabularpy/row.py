@@ -30,7 +30,9 @@ class Row(object):
 		elif arg_len == 2:
 			self.cells = [cell_formatter(cell, self.column_types(header)) for header, cell in zip(self.headers, self.cells)]
 		elif arg_len == 3:
-			self.cells = [cell_formatter(cell, self.column_types(header), header) for header, cell in zip(self.headers, self.cells)]
+			self.cells = [
+				cell_formatter(cell, self.column_types(header), header) for header, cell in zip(self.headers, self.cells)
+			]
 
 	def to_dict(self):
 		return {header: self.get_cell(header).value for header in self.headers}
@@ -66,7 +68,10 @@ class Row(object):
 
 	def to_html(self, add_attr=None, row_total=False):
 		if add_attr:
-			html = ''.join(['<td {}>{}</td>'.format(add_attr(cell, self.column_types[self.headers[x]], self.headers[x], self), self.get_cell(x)) for x, cell in enumerate(self.cells)])
+			html = ''.join(['<td {}>{}</td>'.format(
+				add_attr(cell, self.column_types[self.headers[x]], self.headers[x], self),
+				self.get_cell(x)) for x, cell in enumerate(self.cells)]
+			)
 		else:
 			html = ''.join(['<td>{}</td>'.format(self.get_cell(x)) for x in range(len(self.cells))])
 		if row_total:

@@ -7,8 +7,10 @@ from .types import Timestamp
 from .conditions import Condition
 
 
+# TODO: Add alter column statements
 class Column(object):
-	def __init__(self, name, type_, parent=None, database=None, primary_key=False, index=False, unique=False, nullable=True, default=None):
+	def __init__(self, name, type_, parent=None, database=None, primary_key=False,
+			index=False, unique=False, nullable=True, default=None):
 		self.name = name
 		self.type_ = type_
 		self.primary_key = primary_key

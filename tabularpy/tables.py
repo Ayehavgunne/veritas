@@ -274,7 +274,9 @@ class BaseTable(metaclass=ABCMeta):
 					val = str(cell.value)
 					if ('/' in val or '-' in val) and ':' in val:
 						self.column_types[cell.header] = 'timestamp'
-					elif val[0] != '-' and ('/' in val or '-' in val) and not re.search('[a-zA-Z]', val) and (len(val) == 10 or len(val) == 8):
+					elif val[0] != '-' and ('/' in val or '-' in val) \
+							and not re.search('[a-zA-Z]', val) \
+							and (len(	val) == 10 or len(val) == 8):
 						self.column_types[cell.header] = 'date'
 					elif ':' in val:
 						self.column_types[cell.header] = 'time'
@@ -379,7 +381,15 @@ class BaseTable(metaclass=ABCMeta):
 		if not empty:
 			lists = self.to_list_of_lists()
 			if lists:
-				return ListOfListsTable(lists, self.headers, self.labels, self.footers, self.column_types, self.name, self._settings)
+				return ListOfListsTable(
+					lists,
+					self.headers,
+					self.labels,
+					self.footers,
+					self.column_types,
+					self.name,
+					self._settings
+				)
 		return EmptyTable(self.headers, self.labels, self.footers, self.column_types, self.name, self._settings)
 
 	def remove_duplicates(self, *columns):
@@ -619,7 +629,15 @@ class BaseTable(metaclass=ABCMeta):
 					else:
 						list_of_lists[y].append(None)
 			column_types = {col: self.column_types[values] for col in distinct_col}
-			return ListOfListsTable(list_of_lists, distinct_col, distinct_row, self.footers, column_types, self.name, self._settings)
+			return ListOfListsTable(
+				list_of_lists,
+				distinct_col,
+				distinct_row,
+				self.footers,
+				column_types,
+				self.name,
+				self._settings
+			)
 
 	def to_excel(self, formatter=None):
 		try:
@@ -628,7 +646,10 @@ class BaseTable(metaclass=ABCMeta):
 			# noinspection PyUnresolvedReferences
 			from openpyxl.styles import Font, Alignment
 		except ImportError:
-			print('openpyxl is required in order to create an Excel file. Alternativly one could create a csv file using .to_csv(), which is compatible with Excel.')
+			print(
+				'openpyxl is required in order to create an Excel file. Alternativly',
+				'one could create a csv file using .to_csv(), which is compatible with Excel.'
+			)
 			raise
 		wb = openpyxl.Workbook()
 		ws = wb.active
@@ -698,7 +719,9 @@ class BaseTable(metaclass=ABCMeta):
 					if self.column_types:
 						for header in self.headers:
 							cell = row[header]
-							if 'int' in str(cell.column_type).lower() or 'float' in str(cell.column_type).lower() or 'decimal' in str(cell.column_type).lower():
+							if 'int' in str(cell.column_type).lower() \
+									or 'float' in str(cell.column_type).lower() \
+									or 'decimal' in str(cell.column_type).lower():
 								jsonstring = '{}"{}":{}, '.format(jsonstring, str(header), str(cell).replace(',', ''))
 							else:
 								jsonstring = '{}"{}":"{}", '.format(jsonstring, str(header), str(cell))
@@ -719,7 +742,9 @@ class BaseTable(metaclass=ABCMeta):
 				jsonstring = '{}['.format(jsonstring)
 				if self.column_types:
 					for cell in row:
-						if 'int' in str(cell.column_type).lower() or 'float' in str(cell.column_type).lower() or 'decimal' in str(cell.column_type).lower():
+						if 'int' in str(cell.column_type).lower() \
+								or 'float' in str(cell.column_type).lower() \
+								or 'decimal' in str(cell.column_type).lower():
 							jsonstring = '{}{}, '.format(jsonstring, str(cell).replace(',', ''))
 						else:
 							jsonstring = '{}"{}", '.format(jsonstring, str(cell))
@@ -730,7 +755,8 @@ class BaseTable(metaclass=ABCMeta):
 			jsonstring = '{}]'.format(jsonstring[:-2])
 			return jsonstring
 
-	def to_html_table(self, inner_table=False, footer=False, labels=True, full_html=False, add_attr=None, table_attr=None, header_formatter=None, row_totals=False, col_totals=False):
+	def to_html_table(self, inner_table=False, footer=False, labels=True, full_html=False, add_attr=None,
+			table_attr=None, header_formatter=None, row_totals=False, col_totals=False):
 		html = ''
 		some_labels = self.labels.count(None) != len(self.labels)
 		if full_html:
@@ -805,12 +831,18 @@ class BaseTable(metaclass=ABCMeta):
 	def headers_to_html(self, header_formatter=None, add_attr=None):
 		if header_formatter:
 			if add_attr:
-				html = ''.join('<th {}>{}</th>'.format(add_attr(header, self.column_types[header], header), header_formatter(header)) for header in self.headers)
+				html = ''.join('<th {}>{}</th>'.format(
+					add_attr(header, self.column_types[header], header),
+					header_formatter(header)) for header in self.headers
+				)
 			else:
 				html = ''.join('<th>{}</th>'.format(header_formatter(header)) for header in self.headers)
 		else:
 			if add_attr:
-				html = ''.join('<th {}>{}</th>'.format(add_attr(header, self.column_types[header], header), header) for header in self.headers)
+				html = ''.join('<th {}>{}</th>'.format(
+					add_attr(header, self.column_types[header], header),
+					header) for header in self.headers
+				)
 			else:
 				html = ''.join('<th>{}</th>'.format(header) for header in self.headers)
 		return html
@@ -836,7 +868,15 @@ class BaseTable(metaclass=ABCMeta):
 
 	def _get_column(self, header):
 		if self._has_column(header):
-			return Col(self._table_data[header], self.labels, self.column_types[header], header, self.headers.index(header), self, self._settings)
+			return Col(
+				self._table_data[header],
+				self.labels,
+				self.column_types[header],
+				header,
+				self.headers.index(header),
+				self,
+				self._settings
+			)
 		else:
 			raise AttributeError('{} does not have column {}'.format(self, header))
 
@@ -867,7 +907,15 @@ class BaseTable(metaclass=ABCMeta):
 			if isinstance(args[0], str):
 				for item in args:
 					select.append(self._get_column(item).to_list())
-				return ListOfListsTable(transpose(select), args, self.labels, self.footers, {header: self.column_types[header] for header in args}, self.name, self._settings)
+				return ListOfListsTable(
+					transpose(select),
+					args,
+					self.labels,
+					self.footers,
+					{header: self.column_types[header] for header in args},
+					self.name,
+					self._settings
+				)
 			elif isinstance(args[0], int):
 				for item in args:
 					select.append(self._get_row(item).to_list())
@@ -907,7 +955,10 @@ class BaseTable(metaclass=ABCMeta):
 				elif len(value) == 0:
 					self._table_data[key] = [None for _ in range(self.num_rows)]
 				else:
-					raise ValueError('number of items in provided list, {}, does not match objects rows, {}'.format(len(value), self.num_rows))
+					raise ValueError('number of items in provided list, {}, does not match objects rows, {}'.format(
+						len(value),
+						self.num_rows
+					))
 				self.num_cols += 1
 				if key not in self.headers:
 					self.headers.append(key)
@@ -997,7 +1048,14 @@ class BaseTable(metaclass=ABCMeta):
 				elif not self and other:
 					return other.copy()
 				elif not self and not other:
-					return EmptyTable(self.headers, self.labels + other.labels, self.footers, self.column_types, self.name, self._settings)
+					return EmptyTable(
+						self.headers,
+						self.labels + other.labels,
+						self.footers,
+						self.column_types,
+						self.name,
+						self._settings
+					)
 				else:
 					return self.copy()
 			else:
@@ -1049,7 +1107,8 @@ class BaseTable(metaclass=ABCMeta):
 
 
 class CsvTable(BaseTable):
-	def __init__(self, file_path, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
+	def __init__(self, file_path, headers=None, labels=None, footers=None,
+			column_types=None, name=None, settings=Settings()):
 		super().__init__(headers, labels, footers, column_types, name, settings)
 		# noinspection PyBroadException
 		try:
@@ -1103,7 +1162,8 @@ class CsvTable(BaseTable):
 
 
 class ExcelTable(BaseTable):
-	def __init__(self, file_path, worksheet=0, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
+	def __init__(self, file_path, worksheet=0, headers=None, labels=None,
+			footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(headers, labels, footers, column_types, name, settings)
 		self._setup(file_path)
 		self.worksheet = worksheet
@@ -1135,7 +1195,7 @@ class ExcelTable(BaseTable):
 			for cell in col:
 				if not first:
 					if self._table_data['column_types'][header] == 'interval':
-						self._table_data['table'][header].append(timedelta(days=cell.value*24))
+						self._table_data['table'][header].append(timedelta(days=cell.value * 24))
 					elif self._table_data['column_types'][header] == 'decimal':
 						self._table_data['table'][header].append(Decimal(str(cell.value)))
 					else:
@@ -1158,9 +1218,19 @@ class ExcelTable(BaseTable):
 					self._table_data['column_types'][header] = 'decimal'
 				elif number_format == '[h]:mm:ss;@':
 					self._table_data['column_types'][header] = 'interval'
-				elif number_format == '[$-409]h:mm:ss\ AM/PM;@' or number_format == '[$-409]h:mm\ AM/PM;@' or number_format == 'h:mm:ss;@' or number_format == 'h:mm;@':
+				elif number_format == '[$-409]h:mm:ss\ AM/PM;@' \
+						or number_format == '[$-409]h:mm\ AM/PM;@' \
+						or number_format == 'h:mm:ss;@' \
+						or number_format == 'h:mm;@':
 					self._table_data['column_types'][header] = 'time'
-				elif number_format == 'mm-dd-yy' or number_format == 'mm/dd/yy' or number_format == 'mm-dd-yyyy' or number_format == 'mm/dd/yyyy' or number_format == 'mm/yyyy' or number_format == 'mm-yyyy' or number_format == 'mm/yy' or number_format == 'mm-yy':
+				elif number_format == 'mm-dd-yy' \
+						or number_format == 'mm/dd/yy' \
+						or number_format == 'mm-dd-yyyy' \
+						or number_format == 'mm/dd/yyyy' \
+						or number_format == 'mm/yyyy' \
+						or number_format == 'mm-yyyy' \
+						or number_format == 'mm/yy' \
+						or number_format == 'mm-yy':
 					self._table_data['column_types'][header] = 'date'
 				elif ('/' in val or '-' in val) and ':' in val:
 					self._table_data['column_types'][header] = 'timestamp'
@@ -1203,7 +1273,8 @@ class SqlAlcTable(BaseTable):
 class HtmlTable(BaseTable):
 	__slots__ = '_parser'
 
-	def __init__(self, html, parser=BeautifulSoupParser().parse, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
+	def __init__(self, html, parser=BeautifulSoupParser().parse, labels=None,
+			footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(None, labels, footers, column_types, name, settings)
 		self._parser = parser
 		self._setup(html)

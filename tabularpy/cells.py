@@ -46,9 +46,13 @@ def get_cell_of_type(type_desc):
 
 
 class BaseCell(metaclass=ABCMeta):
-	__slots__ = ('_base', 'value', 'header', 'label', 'column_type', 'row_num', 'col_num', '_parent', '_settings', 'getquoted')
+	__slots__ = (
+		'_base', 'value', 'header', 'label', 'column_type',
+		'row_num', 'col_num', '_parent', '_settings', 'getquoted'
+	)
 
-	def __init__(self, base, value, header=None, label=None, column_type='string', row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, base, value, header=None, label=None, column_type='string',
+			row_num=None, col_num=None, parent=None, settings=Settings()):
 		self._base = base
 		self.header = header
 		self.label = label
@@ -67,10 +71,27 @@ class BaseCell(metaclass=ABCMeta):
 			elif self._base is time:
 				self.value = self._base(value.hour, value.minute, value.second, value.microsecond, value.tzinfo)
 			elif self._base is datetime:
-				self.value = self._base(value.year, value.month, value.day, value.hour, value.minute, value.second, value.microsecond, value.tzinfo)
+				self.value = self._base(
+					value.year,
+					value.month,
+					value.day,
+					value.hour,
+					value.minute,
+					value.second,
+					value.microsecond,
+					value.tzinfo
+				)
 			elif self._base is timedelta:
 				if hasattr(value, 'milliseconds'):
-					self.value = self._base(value.days, value.seconds, value.microseconds, value.milliseconds, value.minutes, value.hours, value.weeks)
+					self.value = self._base(
+						value.days,
+						value.seconds,
+						value.microseconds,
+						value.milliseconds,
+						value.minutes,
+						value.hours,
+						value.weeks
+					)
 				else:
 					self.value = self._base(value.days, value.seconds, value.microseconds)
 			elif self._base is int:
@@ -170,7 +191,14 @@ class BaseCell(metaclass=ABCMeta):
 				return self.value != other
 
 	def __repr__(self):
-		return '{}({}, {}, {}, {}, {}, {})'.format(self.__class__.__name__, self.value, self.header, self.label, self.row_num, self.col_num, self._parent)
+		return '{}({}, {}, {}, {}, {})'.format(
+			self.__class__.__name__,
+			self.value,
+			self.header,
+			self.label,
+			self.row_num,
+			self.col_num
+		)
 
 	def __str__(self):
 		if self.value is not None:
@@ -2022,7 +2050,10 @@ class PercentCell(DecimalCell):
 	def __str__(self):
 		if self.value is not None:
 			s = str(self.value * 100)
-			return '{}%'.format(locale.format('%g', Decimal(s.rstrip('0').rstrip('.')), grouping=True) if '.' in s else locale.format('%g', Decimal(s), grouping=True))
+			if '.' in s:
+				s = s.rstrip('0').rstrip('.')
+			s = locale.format('%g', Decimal(s), grouping=True)
+			return '{}%'.format(s)
 		else:
 			return 'None'
 
@@ -2598,7 +2629,14 @@ class TimestampCell(BaseCell):
 
 	def utcoffset(self):
 		if self.value is not None:
-			return IntervalCell(self._base.utcoffset(self.value), self.header, self.label, self.row_num, self.col_num, self._parent)
+			return IntervalCell(
+				self._base.utcoffset(self.value),
+				self.header,
+				self.label,
+				self.row_num,
+				self.col_num,
+				self._parent
+			)
 
 	def utctimetuple(self):
 		if self.value is not None:

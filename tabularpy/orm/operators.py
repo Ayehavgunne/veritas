@@ -34,7 +34,7 @@ class In(Operator):
 							values = '{}{}, '.format(values, val)
 					values = '{}), '.format(values[:-2])
 				else:
-					if isinstance(value, (cells.StrCell, cells.DateCell, cells.TimeCell, cells.TimestampCell)):
+					if isinstance(value[0], (cells.StrCell, cells.DateCell, cells.TimeCell, cells.TimestampCell)):
 						values = "{}'{}', ".format(values, value[0])
 					else:
 						values = '{}{}, '.format(values, value[0])

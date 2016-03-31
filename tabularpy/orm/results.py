@@ -10,8 +10,8 @@ class Results(object):
         return self
 
     def __next__(self):
-        if self._i < len(self.table.parent.results_buffer):
-            row = self.table.parent.results_buffer[self._i]
+        if self._i < len(self.table.results_buffer):
+            row = self.table.results_buffer[self._i]
             row = Row(
                 list(row),
                 list(self.table.get_column_names()),

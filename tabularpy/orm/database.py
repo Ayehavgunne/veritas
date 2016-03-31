@@ -18,7 +18,6 @@ class Database(object):
 		self.name = None
 		self.cursor = None
 		self.t = None
-		self.results_buffer = None
 
 	def reflect(self, name=None):
 		if name:
@@ -134,6 +133,7 @@ class cursormanager(object):
 			self.database.cursor = None
 			self.cursor.close()
 			self.database.commit()
+
 
 class Tables(object):
 	def __init__(self, tables):

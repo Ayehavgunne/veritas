@@ -49,7 +49,10 @@ class Col(object):
 
 	def to_html(self, add_attr=None, row_total=False):
 		if add_attr:
-			html = ''.join(['<td {}>{}</td>'.format(add_attr(cell, self.column_types[self.labels[x]], self.labels[x], self), self.get_cell(x)) for x, cell in enumerate(self.cells)])
+			html = ''.join(['<td {}>{}</td>'.format(
+				add_attr(cell, self.column_types[self.labels[x]], self.labels[x], self),
+				self.get_cell(x)) for x, cell in enumerate(self.cells)]
+			)
 		else:
 			html = ''.join(['<td>{}</td>'.format(cell) for cell in self.cells])
 		if row_total:

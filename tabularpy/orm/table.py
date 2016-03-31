@@ -26,6 +26,8 @@ from tabularpy.util import select_not_nullable_sql
 from tabularpy.util import select_contraints_sql
 
 
+# TODO: Add join statments
+# TODO: Add drop table statement
 class Table(object):
 	def __init__(self, name, parent):
 		self.name = name
@@ -38,6 +40,7 @@ class Table(object):
 		self.args = []
 		self.c = None
 		self.data = None
+		self.results_buffer = []
 
 	def reflect(self):
 		self.reflect_column_types()
@@ -50,9 +53,8 @@ class Table(object):
 
 	def reflect_from_data(self):
 		if self.data:
-			data = self.data
-			for header in data.headers:
-				self.columns.append(Column(header, data.column_types[header], self, self.parent))
+			for header in self.data.headers:
+				self.columns.append(Column(header, self.data.column_types[header], self, self.parent))
 
 	def results(self):
 		return Results(self)

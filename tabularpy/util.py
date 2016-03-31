@@ -69,7 +69,7 @@ def getindexes(obj, item):
 def rotate_clockwise(matrix, degree=90):
 	if degree not in [0, 90, 180, 270, 360]:
 		return
-	return matrix if not degree else rotate_clockwise(zip(*list(matrix)[::-1]), degree-90)
+	return matrix if not degree else rotate_clockwise(zip(*list(matrix)[::-1]), degree - 90)
 
 
 def horizontal_matrix_flip(matrix):
@@ -124,7 +124,7 @@ def merge_sort(array, index, key=None, reverse=False):
 
 
 def datetime_to_quarter(date_time):
-	return 'Q%s %s' % ((date_time.month-1) // 3 + 1, date_time.year)
+	return 'Q%s %s' % ((date_time.month - 1) // 3 + 1, date_time.year)
 
 
 def parse_time_delta(s):
@@ -165,7 +165,10 @@ def parse_date_time_string(value, str_format):
 
 
 class HtmlParser(HTMLParser):
-	__slots__ = ['html', '_open_tags', '_open_tag_attrs', '_relevant_tags', '_row_num', '_col_num', '_data', '_hidden_rows', '_td']
+	__slots__ = [
+		'html', '_open_tags', '_open_tag_attrs', '_relevant_tags',
+		'_row_num', '_col_num', '_data', '_hidden_rows', '_td'
+	]
 
 	def __init__(self):
 		super().__init__()
