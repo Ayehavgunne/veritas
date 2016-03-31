@@ -1,10 +1,12 @@
 import cgitb
+from .statements import TableCopy
 from .table import Table
 from .conditions import And
 from .conditions import Not
 from .conditions import Or
 
 
+# TODO: Add ability to create temp tables based on other tables and copy information between them
 class Database(object):
 	def __init__(self, connection=None, log=None):
 		self.connection = connection
@@ -69,6 +71,10 @@ class Database(object):
 		table.parent = self
 		self.tables.append(table)
 		self.t = Tables(self.tables)
+
+	@staticmethod
+	def copy_between_tables(from_table, to_table, *columns):
+		return TableCopy(from_table, to_table, *columns)
 
 	@staticmethod
 	def and_(*conditions):

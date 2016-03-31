@@ -16,6 +16,7 @@ from .util import parse_date_time_string
 locale.setlocale(locale.LC_ALL, '')
 
 
+# TODO: Create BytesCell
 def get_cell_of_type(type_desc):
 	if type_desc:
 		type_desc = str(type_desc).lower()

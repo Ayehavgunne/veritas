@@ -1,4 +1,4 @@
-from tabularpy.orm.operators import In
+from .operators import In
 from .types import Boolean
 from .types import Varchar
 from .types import Date
@@ -119,3 +119,6 @@ class Column(object):
 		if self.default:
 			string = '{} DEFAULT {}'.format(string, self.default)
 		return string
+
+	def __repr__(self):
+		return 'Column(name={}, type_={})'.format(self.name, self.type_)

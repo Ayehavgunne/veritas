@@ -34,6 +34,7 @@ from .util import transpose
 locale.setlocale(locale.LC_ALL, '')
 
 
+# TODO: Consider cacheing the cell objects in the table after creation
 class BaseTable(metaclass=ABCMeta):
 	__slots__ = (
 		'headers',
@@ -274,9 +275,10 @@ class BaseTable(metaclass=ABCMeta):
 					val = str(cell.value)
 					if ('/' in val or '-' in val) and ':' in val:
 						self.column_types[cell.header] = 'timestamp'
-					elif val[0] != '-' and ('/' in val or '-' in val) \
+					elif ('/' in val or '-' in val) \
 							and not re.search('[a-zA-Z]', val) \
-							and (len(	val) == 10 or len(val) == 8):
+							and (len(	val) == 10 or len(val) == 8)\
+							and val[0] != '-':
 						self.column_types[cell.header] = 'date'
 					elif ':' in val:
 						self.column_types[cell.header] = 'time'
@@ -1110,14 +1112,13 @@ class CsvTable(BaseTable):
 	def __init__(self, file_path, headers=None, labels=None, footers=None,
 			column_types=None, name=None, settings=Settings()):
 		super().__init__(headers, labels, footers, column_types, name, settings)
-		# noinspection PyBroadException
 		try:
 			if isfile(file_path):
 				with open(file_path) as open_file:
 					self._setup(open_file)
 			else:
 				raise ValueError
-		except Exception:
+		except ValueError:
 			with io.StringIO(file_path) as open_file:
 				self._setup(open_file)
 

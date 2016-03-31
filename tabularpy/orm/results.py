@@ -1,4 +1,4 @@
-from tabularpy.row import Row
+from ..row import Row
 
 
 class Results(object):

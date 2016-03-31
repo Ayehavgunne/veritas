@@ -1,11 +1,13 @@
 from .results import Results
 from .column import Column
-from .statements import Select
-from .statements import Tuple
-from .statements import Create
-from .statements import Update
-from .statements import Delete
-from .statements import Insert
+from . import statements
+# from .statements import CreateTemp
+# from .statements import Drop
+# from .statements import Tuple
+# from .statements import Create
+# from .statements import Update
+# from .statements import Delete
+# from .statements import Insert
 from .types import Varchar
 from .types import BigInt
 from .types import Percent
@@ -17,17 +19,16 @@ from .types import Date
 from .types import Timestamp
 from .types import Time
 from .types import Interval
-from tabularpy.util import select_column_names_sql
-from tabularpy.util import select_serial_sql
-from tabularpy.util import select_types_sql
-from tabularpy.util import select_pkey_sql
-from tabularpy.util import select_index_sql
-from tabularpy.util import select_not_nullable_sql
-from tabularpy.util import select_contraints_sql
+from ..util import select_column_names_sql
+from ..util import select_serial_sql
+from ..util import select_types_sql
+from ..util import select_pkey_sql
+from ..util import select_index_sql
+from ..util import select_not_nullable_sql
+from ..util import select_contraints_sql
 
 
 # TODO: Add join statments
-# TODO: Add drop table statement
 class Table(object):
 	def __init__(self, name, parent):
 		self.name = name
@@ -41,6 +42,7 @@ class Table(object):
 		self.c = None
 		self.data = None
 		self.results_buffer = []
+		self.temp_num = 0
 
 	def reflect(self):
 		self.reflect_column_types()
@@ -252,36 +254,43 @@ class Table(object):
 		return False
 
 	def create(self):
-		return Create(self)
+		return statements.Create(self)
+
+	def create_temp(self):
+		return statements.CreateTemp(self)
 
 	def select(self, *columns):
-		return Select(self, *columns)
+		return statements.Select(self, *columns)
 
 	def insert(self):
 		if not self.data:
 			raise AttributeError('The table must have data to insert with first')
 
-		return Insert(self)
+		return statements.Insert(self)
 
 	def update(self):
 		if not self.data:
 			raise AttributeError('The table must have data to update with first')
-		return Update(self)
+		return statements.Update(self)
 
 	def upsert(self, *on):
 		if not self.data:
 			raise AttributeError('The table must have data to upsert with first')
-		if len(on) > 1:
-			self.delete().where(self.tuple_(*on).in_(self.data.to_list_of_tuples(*on))).execute()
-		else:
-			self.delete().where(on[0].in_(self.data.to_list_of_tuples(on[0]))).execute()
-		self.insert().execute()
+		with self.parent.cursor_manager() as cursor:
+			if len(on) > 1:
+				self.delete(*on).where(self.tuple_(*on).in_(on)).execute(cursor)
+			else:
+				self.delete(on[0]).where(self.tuple_(on[0]).in_(on)).execute(cursor)
+			self.insert().execute(cursor)
 
-	def delete(self, cascaded=False):
-		return Delete(self, cascaded)
+	def delete(self, *on, cascaded=False):
+		return statements.Delete(self, *on, cascaded)
+
+	def drop(self, cascaded=False):
+		return statements.Drop(self, cascaded)
 
 	def tuple_(self, *columns):
-		return Tuple(self, *columns)
+		return statements.Tuple(self, *columns)
 
 	def __str__(self):
 		sql = 'CREATE TABLE {} (\n'.format(self.name)

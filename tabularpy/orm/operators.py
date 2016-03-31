@@ -1,4 +1,5 @@
-from tabularpy import cells
+from . import column
+from .. import cells
 
 operators = ('=', '!=', '<', '>', '<=', '>=', 'IS', 'IN')
 
@@ -9,6 +10,9 @@ class Operator(object):
 
 	def __str__(self):
 		return self.operator
+
+	def __repr__(self):
+		return "{}('{}')".format(type(self).__name__, self.operator)
 
 
 class Is(Operator):
@@ -30,20 +34,28 @@ class In(Operator):
 					for val in value:
 						if isinstance(val, (cells.StrCell, cells.DateCell, cells.TimeCell, cells.TimestampCell)):
 							values = "{}'{}', ".format(values, val)
+						elif isinstance(val, column.Column):
+							values = "{}%({})s, ".format(values, val.name)
 						else:
 							values = '{}{}, '.format(values, val)
 					values = '{}), '.format(values[:-2])
 				else:
 					if isinstance(value[0], (cells.StrCell, cells.DateCell, cells.TimeCell, cells.TimestampCell)):
 						values = "{}'{}', ".format(values, value[0])
+					elif isinstance(value[0], column.Column):
+						values = "{}%({})s, ".format(values, value[0].name)
 					else:
 						values = '{}{}, '.format(values, value[0])
 			else:
 				if isinstance(value, (cells.StrCell, cells.DateCell, cells.TimeCell, cells.TimestampCell)):
 					values = "{}'{}', ".format(values, value)
+				elif isinstance(value, column.Column):
+					values = "{}%({})s, ".format(values, value.name)
 				else:
 					values = '{}{}, '.format(values, value)
 		values = '{}'.format(values[:-2])
+		if isinstance(self.iterable[0], column.Column):
+			return 'IN (({}))'.format(values)
 		return 'IN ({})'.format(values)
 
 

@@ -1,13 +1,14 @@
-from tabularpy.orm import database
-from tabularpy.orm import table as tbl
-from tabularpy.orm.operators import In
+from . import database
+from . import table as tbl
+from .operators import In
 from .column import Column
 
 
 class Statement(object):
-	def __init__(self, table):
+	def __init__(self, table, on=None):
 		self.sql = ''
 		self.table = table
+		self.on = on
 
 	def compose(self, *conditions):
 		for x, condition in enumerate(conditions):
@@ -24,16 +25,19 @@ class Statement(object):
 
 	def execute(self, cursor=None):
 		if cursor:
-			if 'SELECT' in self.sql or 'DELETE' in self.sql or 'CREATE' in self.sql:
-				cursor.execute(self.sql)
-			elif self.table.data:
-				cursor.executemany(self.sql, self.table.data.to_list_of_dicts())
+			self._execute(cursor)
 		else:
 			with self.table.parent.cursor_manager() as cursor:
-				if 'SELECT' in self.sql or 'DELETE' in self.sql or 'CREATE' in self.sql:
-					cursor.execute(self.sql)
-				elif self.table.data:
-					cursor.executemany(self.sql, self.table.data.to_list_of_dicts())
+				self._execute(cursor)
+
+	def _execute(self, cursor):
+		if 'SELECT' in self.sql or 'CREATE' in self.sql or ('DELETE' in self.sql and 'IN' not in self.sql):
+			cursor.execute(self.sql)
+		elif self.table.data:
+			if self.on:
+				cursor.executemany(self.sql, self.table.data.to_list_of_dicts(*self.on))
+			else:
+				cursor.executemany(self.sql, self.table.data.to_list_of_dicts())
 
 	def __str__(self):
 		return self.sql
@@ -61,6 +65,42 @@ class Create(Statement):
 					self.sql = '{0} CREATE INDEX {1}_{2}_idx ON {1} USING btree ({2});'.format(self.sql, obj.name, idx)
 		elif isinstance(obj, database.Database):
 			self.sql = 'CREATE DATABASE {};'.format(obj.name)
+
+
+class CreateTemp(Statement):
+	def __init__(self, table):
+		super().__init__(table)
+		self.sql = 'CREATE TEMP TABLE temp_{}_{}'.format(self.table.name, self.table.temp_num)
+		columns = '('
+		for column in table.columns:
+			columns = '{}{}, '.format(columns, column)
+		if table.primary_keys:
+			columns = '{}CONSTRAINT {}_pkey PRIMARY KEY ('.format(columns, table.name)
+			for column in table.primary_keys:
+				columns = '{}{}, '.format(columns, column)
+			columns = '{}), '.format(columns[:-2])
+		if table.uniques:
+			for unq in table.uniques:
+				columns = '{0}CONSTRAINT {1}_{2}_key UNIQUE ({2}), '.format(columns, table.name, unq)
+		self.sql = '{}{});'.format(self.sql, columns[:-2])
+		if table.indexes:
+			for idx in table.indexes:
+				self.sql = '{0} CREATE INDEX {1}_{2}_idx ON {1} USING btree ({2});'.format(self.sql, table.name, idx)
+
+
+class TableCopy(Statement):
+	def __init__(self, from_table, to_table, *columns):
+		super().__init__(from_table)
+		self.sql = 'INSERT INTO {}'.format(to_table.name)
+		selects = ''
+		if columns:
+			self.sql = '{}('.format(self.sql)
+			for column in columns:
+				self.sql = '{}{}, '.format(self.sql, column.name)
+				selects = '{}{}, '.format(selects, column.name)
+			self.sql = '{}) SELECT {} FROM {}'.format(self.sql[:-2], selects[:-2], self.table.name)
+		else:
+			self.sql = '{}{} SELECT * FROM {}'.format(self.sql, to_table.name, self.table.name)
 
 
 class Select(Statement):
@@ -110,14 +150,21 @@ class Update(Statement):
 
 
 class Delete(Statement):
+	def __init__(self, table, *on):
+		super().__init__(table, on)
+		self.sql = 'DELETE FROM {}'.format(self.table.name)
+
+	def where(self, *conditions):
+		return Where(self.table, self.sql, *conditions)
+
+
+class Drop(Statement):
 	def __init__(self, table, cascaded=False):
 		super().__init__(table)
 		self.sql = 'DROP TABLE {}'.format(self.table.name)
 		if cascaded:
-			self.sql = '{} CASCADED;'.format(self.sql)
-
-	def where(self, *conditions):
-		return Where(self.table, 'DELETE FROM {}'.format(self.table.name), *conditions)
+			self.sql = '{} CASCADED'.format(self.sql)
+		self.sql = '{};'.format(self.sql)
 
 
 class Where(Statement):

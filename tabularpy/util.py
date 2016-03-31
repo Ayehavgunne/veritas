@@ -374,8 +374,8 @@ ORDER BY a.attname;'''
 
 # noinspection SqlResolve
 select_types_sql = '''SELECT
-    column_name,
-    UPPER(type)
+	column_name,
+	UPPER(type)
 FROM (
 	SELECT
 		a.attname AS column_name,
