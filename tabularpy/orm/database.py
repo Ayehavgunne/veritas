@@ -1,4 +1,3 @@
-import cgitb
 from .statements import TableCopy
 from .table import Table
 from .conditions import And
@@ -23,24 +22,22 @@ class Database(object):
 
 	def reflect(self, name=None):
 		if name:
-			self.tables.append(Table(name, self))
-			self.tables[-1].reflect()
-		else:
-			for name in self.get_table_names():
+			if not self.has_table(name):
 				self.tables.append(Table(name, self))
 				self.tables[-1].reflect()
+		else:
+			for name in self.get_table_names():
+				if not self.has_table(name):
+					self.tables.append(Table(name, self))
+					self.tables[-1].reflect()
 		self.t = Tables(self.tables)
 
 	def get_name(self):
-		with self.cursor_manager() as cursor:
-			cursor.execute('SELECT current_database();')
-			return cursor.fetchone()[0]
-
-	def table_exists(self, name):
-		for table in self.tables:
-			if name == table.name:
-				return True
-		return False
+		cursor = self.connection.cursor()
+		cursor.execute('SELECT current_database();')
+		name = cursor.fetchone()[0]
+		cursor.close()
+		return name
 
 	def get_table(self, name):
 		for table in self.tables:
@@ -48,29 +45,39 @@ class Database(object):
 				return table
 
 	def get_table_names(self):
-		with self.cursor_manager() as cursor:
-			# noinspection SqlResolve
-			cursor.execute(
-				"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
-			)
-			return tuple(table[0] for table in cursor.fetchall())
+		cursor = self.connection.cursor()
+		# noinspection SqlResolve
+		cursor.execute(
+			"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
+		)
+		names = tuple(table[0] for table in cursor.fetchall())
+		cursor.close()
+		return names
 
 	def get_current_seq_val(self, name):
-		with self.cursor_manager() as cursor:
-			# noinspection SqlResolve
-			cursor.execute('SELECT last_value FROM {};'.format(name))
-			return cursor.fetchone()[0]
+		cursor = self.connection.cursor()
+		# noinspection SqlResolve
+		cursor.execute('SELECT last_value FROM {};'.format(name))
+		seq_val = cursor.fetchone()[0]
+		cursor.close()
+		return seq_val
 
 	def get_next_seq_val(self, name):
-		with self.cursor_manager() as cursor:
-			# noinspection SqlResolve
-			cursor.execute("SELECT nextval('{}');".format(name))
-			return cursor.fetchone()[0]
+		cursor = self.connection.cursor()
+		# noinspection SqlResolve
+		cursor.execute("SELECT nextval('{}');".format(name))
+		seq_val = cursor.fetchone()[0]
+		cursor.close()
+		return seq_val
 
 	def add_table(self, table):
 		table.parent = self
 		self.tables.append(table)
 		self.t = Tables(self.tables)
+
+	def remove_table(self, name):
+		if self.has_table(name):
+			self.tables.remove(self.get_table(name))
 
 	@staticmethod
 	def copy_between_tables(from_table, to_table, *columns):
@@ -95,10 +102,7 @@ class Database(object):
 			self.connection = psycopg2.connect(connection_string)
 			self.name = self.get_name()
 		except ImportError:
-			raise ImportError('Psycopg2 must be installed to create a PostgreSql cursor')
-
-	def cursor_manager(self):
-		return cursormanager(self)
+			raise ImportError('Psycopg2 must be installed to create a PostgreSql connection')
 
 	def get_cursor(self):
 		return self.connection.cursor()
@@ -111,34 +115,14 @@ class Database(object):
 			self.cursor.close()
 		self.connection.close()
 
+	def has_table(self, name):
+		for table in self.tables:
+			if table.name == name:
+				return True
+		return False
+
 	def __str__(self):
 		return 'CREATE DATABASE {};\n\n{}'.format(self.name, '\n\n'.join(str(table) for table in self.tables))
-
-
-class cursormanager(object):
-	def __init__(self, database):
-		self.database = database
-		self.cursor = None
-
-	def __enter__(self):
-		self.cursor = self.database.connection.cursor()
-		self.database.cursor = self.cursor
-		return self.cursor
-
-	def __exit__(self, exc_type, exc_val, exc_tb):
-		# noinspection PyBroadException
-		try:
-			if exc_type or exc_val or exc_tb:
-				self.database.log.error(cgitb.text((exc_type, exc_val, exc_tb)))
-				self.database.connection.rollback()
-			else:
-				self.database.results_buffer = self.cursor.fetchall()
-		except Exception:
-			pass
-		finally:
-			self.database.cursor = None
-			self.cursor.close()
-			self.database.commit()
 
 
 class Tables(object):

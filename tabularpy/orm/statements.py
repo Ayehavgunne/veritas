@@ -9,6 +9,7 @@ class Statement(object):
 		self.sql = ''
 		self.table = table
 		self.on = on
+		self.table_name = table.name
 
 	def compose(self, *conditions):
 		for x, condition in enumerate(conditions):
@@ -23,21 +24,26 @@ class Statement(object):
 				else:
 					self.sql = '{} AND {}'.format(self.sql, condition)
 
+	def limit(self, num_rows):
+		return Limit(self.table, self.sql, num_rows)
+
 	def execute(self, cursor=None):
 		if cursor:
 			self._execute(cursor)
 		else:
-			with self.table.parent.cursor_manager() as cursor:
+			with self.table.cursor_manager() as cursor:
 				self._execute(cursor)
+		return self.table_name
 
 	def _execute(self, cursor):
-		if 'SELECT' in self.sql or 'CREATE' in self.sql or ('DELETE' in self.sql and 'IN' not in self.sql):
-			cursor.execute(self.sql)
-		elif self.table.data:
+		# if 'SELECT' in self.sql or 'CREATE' in self.sql or ('DELETE' in self.sql and 'IN' not in self.sql):
+		if self.table.data:
 			if self.on:
 				cursor.executemany(self.sql, self.table.data.to_list_of_dicts(*self.on))
 			else:
 				cursor.executemany(self.sql, self.table.data.to_list_of_dicts())
+		else:
+			cursor.execute(self.sql)
 
 	def __str__(self):
 		return self.sql
@@ -68,24 +74,25 @@ class Create(Statement):
 
 
 class CreateTemp(Statement):
-	def __init__(self, table):
+	def __init__(self, table, original_name):
 		super().__init__(table)
-		self.sql = 'CREATE TEMP TABLE temp_{}_{}'.format(self.table.name, self.table.temp_num)
-		columns = '('
-		for column in table.columns:
-			columns = '{}{}, '.format(columns, column)
-		if table.primary_keys:
-			columns = '{}CONSTRAINT {}_pkey PRIMARY KEY ('.format(columns, table.name)
-			for column in table.primary_keys:
-				columns = '{}{}, '.format(columns, column)
-			columns = '{}), '.format(columns[:-2])
-		if table.uniques:
-			for unq in table.uniques:
-				columns = '{0}CONSTRAINT {1}_{2}_key UNIQUE ({2}), '.format(columns, table.name, unq)
-		self.sql = '{}{});'.format(self.sql, columns[:-2])
-		if table.indexes:
-			for idx in table.indexes:
-				self.sql = '{0} CREATE INDEX {1}_{2}_idx ON {1} USING btree ({2});'.format(self.sql, table.name, idx)
+		self.sql = 'CREATE TABLE {} AS SELECT * FROM {} LIMIT 0;'.format(table.name, original_name)
+		# self.sql = 'CREATE TEMP TABLE {}'.format(self.table_name)
+		# columns = '('
+		# for column in self.table.columns:
+		# 	columns = '{}{}, '.format(columns, column)
+		# if self.table.primary_keys:
+		# 	columns = '{}CONSTRAINT {}_pkey PRIMARY KEY ('.format(columns, self.table_name)
+		# 	for column in self.table.primary_keys:
+		# 		columns = '{}{}, '.format(columns, column)
+		# 	columns = '{}), '.format(columns[:-2])
+		# if self.table.uniques:
+		# 	for unq in self.table.uniques:
+		# 		columns = '{0}CONSTRAINT {1}_{2}_key UNIQUE ({2}), '.format(columns, self.table_name, unq)
+		# self.sql = '{}{});'.format(self.sql, columns[:-2])
+		# if self.table.indexes:
+		# 	for idx in self.table.indexes:
+		# 		self.sql = '{0} CREATE INDEX {1}_{2}_idx ON {1} USING btree ({2});'.format(self.sql, self.table_name, idx)
 
 
 class TableCopy(Statement):
@@ -106,7 +113,7 @@ class TableCopy(Statement):
 class Select(Statement):
 	def __init__(self, table, *columns):
 		super().__init__(table)
-		self.sql = 'SELECT '
+		self.sql = 'SELECT'
 		if not columns:
 			self.sql = '{} *, '.format(self.sql)
 		for column in columns:
@@ -132,6 +139,15 @@ class Insert(Statement):
 				columns = '{}{}, '.format(columns, column.name)
 				values = '{}%({})s, '.format(values, column.name)
 		self.sql = '{} {}) VALUES {});'.format(self.sql, columns[:-2], values[:-2])
+
+
+class CopyFromFile(Statement):
+	def __init__(self, table, absolute_path):
+		super().__init__(table)
+		self.sql = "COPY {} FROM '{}'".format(self.table.name, absolute_path)
+		if absolute_path.split('.')[-1].lower() == 'csv':
+			self.sql = '{} CSV'.format(self.sql)
+		self.sql = '{};'.format(self.sql)
 
 
 class Update(Statement):
@@ -186,6 +202,12 @@ class OrderBy(Statement):
 			if column.desc:
 				self.sql = '{} DESC, '.format(self.sql[:-2])
 		self.sql = '{}'.format(self.sql[:-2])
+
+
+class Limit(Statement):
+	def __init__(self, table, sql, num_rows):
+		super().__init__(table)
+		self.sql = '{} LIMIT {};'.format(sql, num_rows)
 
 
 class Tuple(Statement):
