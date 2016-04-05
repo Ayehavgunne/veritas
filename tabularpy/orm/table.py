@@ -1,5 +1,3 @@
-import cgitb
-from ..row import Row
 from .column import Column
 from . import statements
 from .types import Varchar
@@ -51,9 +49,6 @@ class Table(object):
 			for header in self.data.headers:
 				self.columns.append(Column(header, self.data.column_types[header], self, self.parent))
 
-	def results(self):
-		return Results(self)
-
 	def get_column_names(self):
 		return (column.name for column in self.columns)
 
@@ -70,14 +65,15 @@ class Table(object):
 		return (self.get_column(name) for name in self.uniques)
 
 	def query_column_names(self):
-		with self.cursor_manager() as cursor:
+		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_column_names_sql.format(self.name))
 			return (row[0] for row in cursor.fetchall())
 
 	def query_column_types(self):
-		with self.cursor_manager() as cursor:
+		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_types_sql.format(self.name))
-			return {row[0]: row[1] for row in cursor.fetchall()}
+			rows = cursor.fetchall()
+			return {str(row[0]): row[1] for row in rows}
 
 	def reflect_column_types(self):
 		self.columns = []
@@ -110,7 +106,7 @@ class Table(object):
 			self.columns.append(Column(name, type_))
 
 	def query_primary_keys(self):
-		with self.cursor_manager() as cursor:
+		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_pkey_sql.format(self.name))
 			return (row[0] for row in cursor.fetchall())
 
@@ -118,15 +114,15 @@ class Table(object):
 		self.primary_keys = list(self.query_primary_keys())
 
 	def query_serials(self):
-		with self.cursor_manager() as cursor:
+		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_serial_sql.format(self.name))
-			return {row[0]: row[1] for row in cursor.fetchall()}
+			return {str(row[0]): row[1] for row in cursor.fetchall()}
 
 	def reflect_serials(self):
 		self.serials = []
 		for name, seq in self.query_serials().items():
 			self.serials.append(name)
-			with self.cursor_manager() as cursor:
+			with self.parent.cursor_manager() as cursor:
 				# noinspection SqlResolve
 				cursor.execute("SELECT setval('{}', COALESCE((SELECT MAX({})+1 FROM {}), 1), false);".format(seq, name, self.name))
 			col = self.get_column(name)
@@ -134,7 +130,7 @@ class Table(object):
 			col.serial_val = self.parent.get_next_seq_val(seq)
 
 	def query_indexes(self):
-		with self.cursor_manager() as cursor:
+		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_index_sql.format(self.name))
 			return (row[0] for row in cursor.fetchall())
 
@@ -142,7 +138,7 @@ class Table(object):
 		self.indexes = list(self.query_indexes())
 
 	def query_not_nullables(self):
-		with self.cursor_manager() as cursor:
+		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_not_nullable_sql.format(self.name))
 			return (row[0] for row in cursor.fetchall())
 
@@ -151,9 +147,9 @@ class Table(object):
 			self.get_column(name).nullable = False
 
 	def query_constraints(self):
-		with self.cursor_manager() as cursor:
+		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_contraints_sql.format(self.name))
-			return {row[0]: row[1] for row in cursor.fetchall()}
+			return {str(row[0]): row[1] for row in cursor.fetchall()}
 
 	def reflect_constraints(self):
 		self.uniques = []
@@ -262,7 +258,7 @@ class Table(object):
 	def upsert(self, *on):
 		if not self.data:
 			raise AttributeError('The table must have data to upsert with first')
-		with self.cursor_manager() as cursor:
+		with self.parent.cursor_manager() as cursor:
 			if len(on) > 1:
 				self.delete(*on).where(self.tuple_(*on).in_(on)).execute(cursor)
 			else:
@@ -287,9 +283,6 @@ class Table(object):
 			if column.name == name:
 				return True
 		return False
-
-	def cursor_manager(self):
-		return cursormanager(self)
 
 	# noinspection PyProtectedMember
 	def _has_row(self, row_num):
@@ -336,55 +329,3 @@ class Columns(object):
 			if item == column.name:
 				return column
 		raise AttributeError
-
-
-class cursormanager(object):
-	def __init__(self, table):
-		self.table = table
-		self.cursor = None
-
-	def __enter__(self):
-		self.cursor = self.table.parent.connection.cursor()
-		self.table.cursor = self.cursor
-		return self.cursor
-
-	def __exit__(self, exc_type, exc_val, exc_tb):
-		# noinspection PyBroadException
-		try:
-			if exc_type or exc_val or exc_tb:
-				self.table.log.error(cgitb.text((exc_type, exc_val, exc_tb)))
-				self.table.parent.connection.rollback()
-			else:
-				self.table.results_buffer = self.cursor.fetchall()
-		except Exception:
-			pass
-		finally:
-			self.table.cursor = None
-			self.cursor.close()
-			self.table.parent.commit()
-
-
-class Results(object):
-	def __init__(self, table):
-		self.table = table
-		self._i = 0
-# TODO: Enhance this functionality. DO WHATEVER IT TAKES! YOU CAN DO IT!
-
-	def __iter__(self):
-		return self
-
-	def __next__(self):
-		if self._i < len(self.table.results_buffer):
-			row = self.table.results_buffer[self._i]
-			row = Row(
-				list(row),
-				list(self.table.get_column_names()),
-				self.table.get_column_types(),
-				self._i,
-				self.table
-			)
-			self._i += 1
-			return row
-		else:
-			self._i = 0
-			raise StopIteration

@@ -8,14 +8,13 @@ from .cells import StrCell
 
 
 class Row(object):
-	__slots__ = ('cells', 'headers', 'column_types', 'row_num', 'label', '_parent', '_i', '_settings')
+	__slots__ = ('cells', 'headers', 'column_types', 'row_num', '_parent', '_i', '_settings')
 
-	def __init__(self, cells, headers, column_types, row_num, parent, label=None, settings=Settings()):
+	def __init__(self, cells, headers, column_types, row_num, parent, settings=Settings()):
 		self.cells = cells
 		self.headers = headers
 		self.column_types = column_types
 		self.row_num = row_num
-		self.label = label
 		self._parent = parent
 		self._settings = settings
 		self._i = 0
@@ -57,14 +56,14 @@ class Row(object):
 			index = self.headers.index(x)
 			cell_type = get_cell_of_type(self.column_types[x])
 			if cell_type is None:
-				return StrCell(self.cells[index], x, self.label, self.row_num, index, self, self._settings)
-			return cell_type(self.cells[index], x, self.label, self.row_num, index, self, self._settings)
+				return StrCell(self.cells[index], x, self.row_num, index, self, self._settings)
+			return cell_type(self.cells[index], x, self.row_num, index, self, self._settings)
 		elif isinstance(x, int):
 			header = self.headers[x]
 			cell_type = get_cell_of_type(self.column_types[header])
 			if cell_type is None:
-				return StrCell(self.cells[x], header, self.label, self.row_num, x, self, self._settings)
-			return cell_type(self.cells[x], header, self.label, self.row_num, x, self, self._settings)
+				return StrCell(self.cells[x], header, self.row_num, x, self, self._settings)
+			return cell_type(self.cells[x], header, self.row_num, x, self, self._settings)
 
 	def to_html(self, add_attr=None, row_total=False):
 		if add_attr:

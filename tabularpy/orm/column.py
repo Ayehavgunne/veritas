@@ -12,6 +12,30 @@ class Column(object):
 	def __init__(self, name, type_, parent=None, database=None, primary_key=False,
 			index=False, unique=False, nullable=True, default=None):
 		self.name = name
+		self.database = database
+		if isinstance(type_, int):
+			if type_ == 21 or type_ == 23:
+				type_ = 'INTEGER'
+			elif type_ == 20:
+				type_ = 'BIGINT'
+			elif type_ == 16:
+				type_ = 'BOOLEAN'
+			elif type_ == 1082:
+				type_ = 'DATE'
+			elif type_ == 700 or type_ == 701 or type_ == 1700:
+				type_ = 'NUMERIC'
+			elif type_ == 2281 or type_ == 1186:
+				type_ = 'INTERVAL'
+			elif type_ == 790:
+				type_ = 'MONEY'
+			elif type_ == 109164:
+				type_ = 'PERCENT'
+			elif type_ == 25 or type_ == 1043:
+				type_ = 'VARCHAR'
+			elif type_ == 1083 or type_ == 1266:
+				type_ = 'TIME'
+			elif type_ == 11605 or type_ == 1114 or type_ == 1184:
+				type_ = 'TIMESTAMP'
 		self.type_ = type_
 		self.primary_key = primary_key
 		self.serial = None
@@ -22,7 +46,7 @@ class Column(object):
 		self.default = default
 		self.descending = False
 		self.parent = parent
-		self.database = database
+
 		self._ignore = False
 	# TODO: Add more Condition Operators
 

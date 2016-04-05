@@ -1,4 +1,7 @@
 # TODO: Add more sql types
+# TODO: Add Sql Array types
+
+
 class Type(object):
 	def __repr__(self):
 		return '{}()'.format(type(self.__name__))

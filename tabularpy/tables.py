@@ -21,7 +21,7 @@ from .orm.conditions import Operand
 from .orm.operators import Operator
 from .cells import StrCell
 from .cells import get_cell_of_type
-from .column import Col
+from .col import Col
 from .row import Row
 from .util import BeautifulSoupParser
 from .util import find_duplicates
@@ -38,7 +38,6 @@ locale.setlocale(locale.LC_ALL, '')
 class BaseTable(metaclass=ABCMeta):
 	__slots__ = (
 		'headers',
-		'labels',
 		'footers',
 		'num_rows',
 		'num_cols',
@@ -50,9 +49,8 @@ class BaseTable(metaclass=ABCMeta):
 		'_settings',
 	)
 
-	def __init__(self, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
+	def __init__(self, headers=None, footers=None, column_types=None, name=None, settings=Settings()):
 		self.headers = headers or []
-		self.labels = labels or []
 		self.footers = footers or []
 		self.column_types = column_types or {}
 		self.num_rows = 0
@@ -98,8 +96,6 @@ class BaseTable(metaclass=ABCMeta):
 			self._table_data = table
 		else:
 			self._table_data = {header: [] for header in self.headers}
-		if not self.labels:
-			self.labels = [str(x) for x in range(self.num_rows)]
 		if cf:
 			self.format_cells(cf)
 		if not all(list(self.column_types.values())):
@@ -152,7 +148,7 @@ class BaseTable(metaclass=ABCMeta):
 		else:
 			raise ValueError('shape of column does not match table')
 
-	def add_row(self, row, prepend=False, label=None):
+	def add_row(self, row, prepend=False):
 		if isinstance(row, dict):
 			row_headers = row.keys()
 			for row_header in row_headers:
@@ -170,16 +166,13 @@ class BaseTable(metaclass=ABCMeta):
 					except KeyError:
 						self._table_data[header].insert(0, None)
 			self.num_rows += 1
-			if label is None:
-				if not prepend:
-					self.labels.append(str(len(self.labels)))
-				else:
-					self.labels.insert(0, str(len(self.labels)))
+		if isinstance(row, Row):
+			if row.headers == self.headers:
+				for cell in row:
+					self._table_data[cell.header].append(cell.value)
+				self.num_rows += 1
 			else:
-				if not prepend:
-					self.labels.append(label)
-				else:
-					self.labels.insert(0, label)
+				raise AttributeError('Columns do not match')
 		else:
 			raise ValueError('{} is not of type dict'.format(row))
 
@@ -336,8 +329,8 @@ class BaseTable(metaclass=ABCMeta):
 				if self._has_row(x):
 					cell_type = get_cell_of_type(self.column_types[y])
 					if cell_type is None:
-						return StrCell(self._table_data[y][x], y, self.labels[x], x, self.headers.index(y), self._get_row(x))
-					return cell_type(self._table_data[y][x], y, self.labels[x], x, self.headers.index(y), self._get_row(x))
+						return StrCell(self._table_data[y][x], y, x, self.headers.index(y), self._get_row(x))
+					return cell_type(self._table_data[y][x], y, x, self.headers.index(y), self._get_row(x))
 				else:
 					raise AttributeError('{} does not have row {}'.format(self, x))
 			else:
@@ -346,8 +339,8 @@ class BaseTable(metaclass=ABCMeta):
 			header = self.headers[y]
 			cell_type = get_cell_of_type(self.column_types[header])
 			if cell_type is None:
-				return StrCell(self._table_data[header][x], header, self.labels[x], x, y, self._get_row(x))
-			return cell_type(self._table_data[header][x], header, self.labels[x], x, y, self._get_row(x))
+				return StrCell(self._table_data[header][x], header, x, y, self._get_row(x))
+			return cell_type(self._table_data[header][x], header, x, y, self._get_row(x))
 
 	def change_cell(self, x, y, value):
 		if isinstance(y, str) and isinstance(x, int):
@@ -386,13 +379,12 @@ class BaseTable(metaclass=ABCMeta):
 				return ListOfListsTable(
 					lists,
 					self.headers,
-					self.labels,
 					self.footers,
 					self.column_types,
 					self.name,
 					self._settings
 				)
-		return EmptyTable(self.headers, self.labels, self.footers, self.column_types, self.name, self._settings)
+		return EmptyTable(self.headers, self.footers, self.column_types, self.name, self._settings)
 
 	def remove_duplicates(self, *columns):
 		if self:
@@ -452,7 +444,7 @@ class BaseTable(metaclass=ABCMeta):
 		tables = []
 		for condition in conditions:
 			tables.append(self.filter(condition, w))
-		w = EmptyTable(self.headers, self.labels, self.footers, self.column_types, self.name, self._settings)
+		w = EmptyTable(self.headers, self.footers, self.column_types, self.name, self._settings)
 		for table in tables:
 			w = w + table
 		w.remove_duplicates()
@@ -523,9 +515,6 @@ class BaseTable(metaclass=ABCMeta):
 				if not row[col] >= val:
 					table.pop_row(row.row_num)
 		return table
-
-	def column_to_label(self, index):
-		self.labels = self.pop_column(index)
 
 	def by_columns(self):
 		return (self._get_column(header) for header in self.headers)
@@ -634,7 +623,6 @@ class BaseTable(metaclass=ABCMeta):
 			return ListOfListsTable(
 				list_of_lists,
 				distinct_col,
-				distinct_row,
 				self.footers,
 				column_types,
 				self.name,
@@ -757,10 +745,9 @@ class BaseTable(metaclass=ABCMeta):
 			jsonstring = '{}]'.format(jsonstring[:-2])
 			return jsonstring
 
-	def to_html_table(self, inner_table=False, footer=False, labels=True, full_html=False, add_attr=None,
+	def to_html_table(self, inner_table=False, footer=False, full_html=False, add_attr=None,
 			table_attr=None, header_formatter=None, row_totals=False, col_totals=False):
 		html = ''
-		some_labels = self.labels.count(None) != len(self.labels)
 		if full_html:
 			html = '<html><body>'
 		if not inner_table:
@@ -770,52 +757,25 @@ class BaseTable(metaclass=ABCMeta):
 				html = '{}<table>'.format(html)
 		if self.headers:
 			html = '{}<thead><tr>'.format(html)
-			if some_labels and labels:
-				if isinstance(self.labels[-1], tuple) or isinstance(self.labels[-1], list):
-					for _ in self.labels[-1]:
-						html = '{}<th></th>'.format(html)
-					html = '{}{}'.format(html, self.headers_to_html(header_formatter, add_attr))
-				else:
-					html = '{}<th></th>{}'.format(html, self.headers_to_html(header_formatter, add_attr))
-			else:
-				html = '{}{}'.format(html, self.headers_to_html(header_formatter, add_attr))
+			html = '{}{}'.format(html, self.headers_to_html(header_formatter, add_attr))
 			if row_totals:
 				html = '{}<th>Total</th>'.format(html)
 			html = '{}</tr></thead>'.format(html)
 		if self.footers:
 			html = '{}<tfoot><tr>'.format(html)
-			if some_labels and labels:
-				if isinstance(self.labels[-1], tuple) or isinstance(self.labels[-1], list):
-					for _ in self.labels[-1]:
-						html = '{}<th></th>'.format(html)
-					html = '{}{}'.format(html, self.footers_to_html())
-				else:
-					html = '{}<th></th>{}'.format(html, self.footers_to_html())
-			else:
-				html = '{}{}'.format(html, self.footers_to_html())
+			html = '{}{}'.format(html, self.footers_to_html())
 			html = '{}</tr></tfoot>'.format(html)
 		elif footer:
 			html = '{}<tfoot></tfoot>'.format(html)
 		html = '{}<tbody>'.format(html)
 		grand_total = 0
 		for y, row in enumerate(self):
-			if some_labels and labels:
-				if isinstance(self.labels[y], tuple) or isinstance(self.labels[y], list):
-					html = '{}<tr>'.format(html)
-					for label in self.labels[y]:
-						html = '{}<td class="labels">{}</td>'.format(html, label)
-					html = '{}{}</tr>'.format(html, row.to_html(add_attr, row_totals))
-				else:
-					html = '{}<tr><td class="labels">{}</td>{}</tr>'.format(html, self.labels[y], row.to_html(add_attr, row_totals))
-			else:
-				html = '{}<tr>{}</tr>'.format(html, row.to_html(add_attr, row_totals))
+			html = '{}<tr>{}</tr>'.format(html, row.to_html(add_attr, row_totals))
 			if row_totals:
 				grand_total += row.sum()
 		if col_totals:
 			grand_total = 0
 			html = '{}<tr>'.format(html)
-			if some_labels and labels:
-				html = '{}<td class="coltotal">Total</td>'.format(html)
 			for col in self.by_columns():
 				total = col.sum()
 				html = '{}<td class="coltotal">{:,}</td>'.format(html, total)
@@ -872,7 +832,6 @@ class BaseTable(metaclass=ABCMeta):
 		if self._has_column(header):
 			return Col(
 				self._table_data[header],
-				self.labels,
 				self.column_types[header],
 				header,
 				self.headers.index(header),
@@ -897,7 +856,7 @@ class BaseTable(metaclass=ABCMeta):
 			r_append = row.append
 			for col in self.headers:
 				r_append(self._table_data[col][row_num])
-			return Row(row, list(self.headers), self.column_types.copy(), row_num, self, self.labels[row_num], self._settings)
+			return Row(row, list(self.headers), self.column_types.copy(), row_num, self, self._settings)
 
 	def __getattr__(self, item):
 		if self._has_column(item):
@@ -912,7 +871,6 @@ class BaseTable(metaclass=ABCMeta):
 				return ListOfListsTable(
 					transpose(select),
 					args,
-					self.labels,
 					self.footers,
 					{header: self.column_types[header] for header in args},
 					self.name,
@@ -924,7 +882,6 @@ class BaseTable(metaclass=ABCMeta):
 				return ListOfListsTable(
 					select,
 					self.headers,
-					self.labels,
 					self.footers,
 					self.column_types,
 					self.name,
@@ -938,7 +895,6 @@ class BaseTable(metaclass=ABCMeta):
 				return ListOfListsTable(
 					select_rows,
 					self.headers,
-					self.labels,
 					self.footers,
 					self.column_types,
 					self.name,
@@ -1041,7 +997,6 @@ class BaseTable(metaclass=ABCMeta):
 					return ListOfListsTable(
 						list1,
 						self.headers,
-						self.labels + other.labels,
 						self.footers,
 						self.column_types,
 						self.name,
@@ -1052,7 +1007,6 @@ class BaseTable(metaclass=ABCMeta):
 				elif not self and not other:
 					return EmptyTable(
 						self.headers,
-						self.labels + other.labels,
 						self.footers,
 						self.column_types,
 						self.name,
@@ -1100,8 +1054,6 @@ class BaseTable(metaclass=ABCMeta):
 			return False
 		if self.num_rows != other.num_rows:
 			return False
-		if self.labels != other.labels:
-			return False
 		return True
 
 	def __ne__(self, other):
@@ -1109,9 +1061,9 @@ class BaseTable(metaclass=ABCMeta):
 
 
 class CsvTable(BaseTable):
-	def __init__(self, file_path, headers=None, labels=None, footers=None,
+	def __init__(self, file_path, headers=None, footers=None,
 			column_types=None, name=None, settings=Settings()):
-		super().__init__(headers, labels, footers, column_types, name, settings)
+		super().__init__(headers, footers, column_types, name, settings)
 		try:
 			if isfile(file_path):
 				with open(file_path) as open_file:
@@ -1163,9 +1115,9 @@ class CsvTable(BaseTable):
 
 
 class ExcelTable(BaseTable):
-	def __init__(self, file_path, worksheet=0, headers=None, labels=None,
+	def __init__(self, file_path, worksheet=0, headers=None,
 			footers=None, column_types=None, name=None, settings=Settings()):
-		super().__init__(headers, labels, footers, column_types, name, settings)
+		super().__init__(headers, footers, column_types, name, settings)
 		self._setup(file_path)
 		self.worksheet = worksheet
 
@@ -1248,8 +1200,8 @@ class ExcelTable(BaseTable):
 class SqlAlcTable(BaseTable):
 	__slots__ = 'query'
 
-	def __init__(self, result, query=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
-		super().__init__(None, labels, footers, column_types, name, settings)
+	def __init__(self, result, query=None, footers=None, column_types=None, name=None, settings=Settings()):
+		super().__init__(None, footers, column_types, name, settings)
 		self.query = query
 		self._setup(result)
 
@@ -1274,9 +1226,9 @@ class SqlAlcTable(BaseTable):
 class HtmlTable(BaseTable):
 	__slots__ = '_parser'
 
-	def __init__(self, html, parser=BeautifulSoupParser().parse, labels=None,
+	def __init__(self, html, parser=BeautifulSoupParser().parse,
 			footers=None, column_types=None, name=None, settings=Settings()):
-		super().__init__(None, labels, footers, column_types, name, settings)
+		super().__init__(None, footers, column_types, name, settings)
 		self._parser = parser
 		self._setup(html)
 
@@ -1286,8 +1238,8 @@ class HtmlTable(BaseTable):
 
 
 class ListOfListsTable(BaseTable):
-	def __init__(self, lists, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
-		super().__init__(headers, labels, footers, column_types, name, settings)
+	def __init__(self, lists, headers=None, footers=None, column_types=None, name=None, settings=Settings()):
+		super().__init__(headers, footers, column_types, name, settings)
 		self._setup(lists)
 
 	def _setup(self, obj):
@@ -1300,8 +1252,8 @@ class ListOfListsTable(BaseTable):
 
 
 class ListOfDictsTable(BaseTable):
-	def __init__(self, dicts, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
-		super().__init__(None, labels, footers, column_types, name, settings)
+	def __init__(self, dicts, footers=None, column_types=None, name=None, settings=Settings()):
+		super().__init__(None, footers, column_types, name, settings)
 		self._setup(dicts)
 
 	def _setup(self, obj):
@@ -1319,8 +1271,17 @@ class ListOfDictsTable(BaseTable):
 
 
 class EmptyTable(BaseTable):
-	def __init__(self, headers=None, labels=None, footers=None, column_types=None, name=None, settings=Settings()):
-		super().__init__(headers, labels, footers, column_types, name, settings)
+	def __init__(self, headers=None, footers=None, column_types=None, name=None, settings=Settings()):
+		super().__init__(headers, footers, column_types, name, settings)
+		self._setup(None)
+
+	def _setup(self, obj):
+		self._initialize()
+
+
+class ResultsTable(BaseTable):
+	def __init__(self, headers=None, footers=None, column_types=None, name=None, settings=Settings()):
+		super().__init__(headers, footers, column_types, name, settings)
 		self._setup(None)
 
 	def _setup(self, obj):

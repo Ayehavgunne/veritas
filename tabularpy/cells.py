@@ -48,15 +48,14 @@ def get_cell_of_type(type_desc):
 
 class BaseCell(metaclass=ABCMeta):
 	__slots__ = (
-		'_base', 'value', 'header', 'label', 'column_type',
+		'_base', 'value', 'header', 'column_type',
 		'row_num', 'col_num', '_parent', '_settings', 'getquoted'
 	)
 
-	def __init__(self, base, value, header=None, label=None, column_type='string',
+	def __init__(self, base, value, header=None, column_type='string',
 			row_num=None, col_num=None, parent=None, settings=Settings()):
 		self._base = base
 		self.header = header
-		self.label = label
 		self.column_type = column_type
 		self.row_num = row_num
 		self.col_num = col_num
@@ -135,27 +134,27 @@ class BaseCell(metaclass=ABCMeta):
 	def _new(self, value, class_type=None):
 		if class_type is None:
 			if isinstance(value, str):
-				return StrCell(value, self.header, self.label, self.row_num, self.col_num)
+				return StrCell(value, self.header, self.row_num, self.col_num)
 			elif isinstance(value, int):
-				return IntCell(value, self.header, self.label, self.row_num, self.col_num)
+				return IntCell(value, self.header, self.row_num, self.col_num)
 			elif isinstance(value, float):
-				return FloatCell(value, self.header, self.label, self.row_num, self.col_num)
+				return FloatCell(value, self.header, self.row_num, self.col_num)
 			elif isinstance(value, Decimal):
-				return DecimalCell(value, self.header, self.label, self.row_num, self.col_num)
+				return DecimalCell(value, self.header, self.row_num, self.col_num)
 			elif isinstance(value, bool):
-				return BooleanCell(value, self.header, self.label, self.row_num, self.col_num)
+				return BooleanCell(value, self.header, self.row_num, self.col_num)
 			elif isinstance(value, date):
-				return DateCell(value, self.header, self.label, self.row_num, self.col_num)
+				return DateCell(value, self.header, self.row_num, self.col_num)
 			elif isinstance(value, time):
-				return TimeCell(value, self.header, self.label, self.row_num, self.col_num)
+				return TimeCell(value, self.header, self.row_num, self.col_num)
 			elif isinstance(value, datetime):
-				return TimestampCell(value, self.header, self.label, self.row_num, self.col_num)
+				return TimestampCell(value, self.header, self.row_num, self.col_num)
 			elif isinstance(value, timedelta):
-				return IntervalCell(value, self.header, self.label, self.row_num, self.col_num)
+				return IntervalCell(value, self.header, self.row_num, self.col_num)
 			else:
-				return self.__class__(value, self.header, self.label, self.row_num, self.col_num)
+				return self.__class__(value, self.header, self.row_num, self.col_num)
 		else:
-			return class_type(value, self.header, self.label, self.row_num, self.col_num)
+			return class_type(value, self.header, self.row_num, self.col_num)
 
 	def change_type(self, class_type):
 		if self._is_of_same_base_type(class_type):
@@ -196,7 +195,6 @@ class BaseCell(metaclass=ABCMeta):
 			self.__class__.__name__,
 			self.value,
 			self.header,
-			self.label,
 			self.row_num,
 			self.col_num
 		)
@@ -215,8 +213,8 @@ class BaseCell(metaclass=ABCMeta):
 class StrCell(BaseCell):
 	__slots__ = ('_i',)
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
-		super().__init__(str, value, header, label, 'string', row_num, col_num, parent, settings)
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+		super().__init__(str, value, header, 'string', row_num, col_num, parent, settings)
 		self._i = 0
 
 	def __add__(self, other):
@@ -554,8 +552,8 @@ class StrCell(BaseCell):
 class IntCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
-		super().__init__(int, value, header, label, 'integer', row_num, col_num, parent, settings)
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+		super().__init__(int, value, header, 'integer', row_num, col_num, parent, settings)
 
 	def __abs__(self):
 		if self.value is None and self._settings.ignore_none:
@@ -1093,8 +1091,8 @@ class IntCell(BaseCell):
 class FloatCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
-		super().__init__(float, value, header, label, 'float', row_num, col_num, parent, settings)
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+		super().__init__(float, value, header, 'float', row_num, col_num, parent, settings)
 
 	def __abs__(self):
 		if self.value is None and self._settings.ignore_none:
@@ -1453,8 +1451,8 @@ class FloatCell(BaseCell):
 class DecimalCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
-		super().__init__(Decimal, value, header, label, 'decimal', row_num, col_num, parent, settings)
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+		super().__init__(Decimal, value, header, 'decimal', row_num, col_num, parent, settings)
 
 	def __abs__(self):
 		if self.value is None and self._settings.ignore_none:
@@ -2040,12 +2038,12 @@ class DecimalCell(BaseCell):
 class PercentCell(DecimalCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, str):
 			if '%' in value:
 				value = value.replace('%', '')
 				value = Decimal(value) / 100
-		super().__init__(value, header, label, row_num, col_num, parent, settings)
+		super().__init__(value, header, row_num, col_num, parent, settings)
 		self.column_type = 'percent'
 
 	def __str__(self):
@@ -2062,11 +2060,11 @@ class PercentCell(DecimalCell):
 class MoneyCell(DecimalCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, str):
 			value = value.replace('$', '')
 			value = value.replace(',', '')
-		super().__init__(value, header, label, row_num, col_num, parent, settings)
+		super().__init__(value, header, row_num, col_num, parent, settings)
 		self.column_type = 'money'
 
 	def __str__(self):
@@ -2082,11 +2080,11 @@ class MoneyCell(DecimalCell):
 class BooleanCell(IntCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, str):
 			if value.lower() == 'false':
 				value = False
-		super().__init__(bool(value), header, label, row_num, col_num, parent, settings)
+		super().__init__(bool(value), header, row_num, col_num, parent, settings)
 		self.column_type = 'bool'
 		self.value = bool(value)
 
@@ -2100,9 +2098,9 @@ class BooleanCell(IntCell):
 class DateCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		value = parse_date_time_string(value, settings.date_format)
-		super().__init__(date, value, header, label, 'date', row_num, col_num, parent, settings)
+		super().__init__(date, value, header, 'date', row_num, col_num, parent, settings)
 
 	def __add__(self, other):
 		if self.value is None and self._settings.ignore_none:
@@ -2283,9 +2281,9 @@ class DateCell(BaseCell):
 class TimeCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		value = parse_date_time_string(value, settings.time_format)
-		super().__init__(time, value, header, label, 'time', row_num, col_num, parent, settings)
+		super().__init__(time, value, header, 'time', row_num, col_num, parent, settings)
 
 	def __bool__(self):
 		if self.value is not None:
@@ -2398,21 +2396,21 @@ class TimeCell(BaseCell):
 class SecondsCell(IntCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, datetime):
 			value = seconds_since_epoch(value)
 		elif isinstance(value, str):
 			value = seconds_since_epoch(datetime.strptime(value, '%Y/%m/%d'))
-		super().__init__(value, header, label, row_num, col_num, parent, settings)
+		super().__init__(value, header, row_num, col_num, parent, settings)
 		self.column_type = 'seconds'
 
 
 class TimestampCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		value = parse_date_time_string(value, settings.datetime_format)
-		super().__init__(datetime, value, header, label, 'timestamp', row_num, col_num, parent, settings)
+		super().__init__(datetime, value, header, 'timestamp', row_num, col_num, parent, settings)
 
 	def __add__(self, other):
 		if self.value is None and self._settings.ignore_none:
@@ -2527,7 +2525,7 @@ class TimestampCell(BaseCell):
 
 	def date(self):
 		if self.value is not None:
-			return DateCell(self._base.date(self.value), self.header, self.label, self.row_num, self.col_num, self._parent)
+			return DateCell(self._base.date(self.value), self.header, self.row_num, self.col_num, self._parent)
 
 	@property
 	def day(self):
@@ -2601,7 +2599,7 @@ class TimestampCell(BaseCell):
 
 	def time(self):
 		if self.value is not None:
-			return TimeCell(self._base.time(self.value), self.header, self.label, self.row_num, self.col_num, self._parent)
+			return TimeCell(self._base.time(self.value), self.header, self.row_num, self.col_num, self._parent)
 
 	def timestamp(self):
 		if self.value is not None:
@@ -2613,7 +2611,7 @@ class TimestampCell(BaseCell):
 
 	def timetz(self):
 		if self.value is not None:
-			return TimeCell(self._base.timetz(self.value), self.header, self.label, self.row_num, self.col_num, self._parent)
+			return TimeCell(self._base.timetz(self.value), self.header, self.row_num, self.col_num, self._parent)
 
 	def toordinal(self):
 		if self.value is not None:
@@ -2633,7 +2631,6 @@ class TimestampCell(BaseCell):
 			return IntervalCell(
 				self._base.utcoffset(self.value),
 				self.header,
-				self.label,
 				self.row_num,
 				self.col_num,
 				self._parent
@@ -2656,10 +2653,10 @@ class TimestampCell(BaseCell):
 class IntervalCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		if isinstance(value, str):
 			value = parse_time_delta(value)
-		super().__init__(timedelta, value, header, label, 'interval', row_num, col_num, parent, settings)
+		super().__init__(timedelta, value, header, 'interval', row_num, col_num, parent, settings)
 
 	def __abs__(self):
 		if self.value is None and self._settings.ignore_none:
@@ -2952,8 +2949,8 @@ class IntervalCell(BaseCell):
 class ListCell(BaseCell):
 	__slots__ = ()
 
-	def __init__(self, value, header=None, label=None, row_num=None, col_num=None, parent=None, settings=Settings()):
-		super().__init__(list, value, header, label, 'list', row_num, col_num, parent, settings)
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+		super().__init__(list, value, header, 'list', row_num, col_num, parent, settings)
 
 	def __add__(self, other):
 		if self.value is None and self._settings.ignore_none:

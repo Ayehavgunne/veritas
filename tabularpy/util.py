@@ -393,6 +393,26 @@ FROM (
 ) AS tabledefinition;'''
 
 # noinspection SqlResolve
+select_query_types_sql = '''SELECT
+	column_name,
+	UPPER(type)
+FROM (
+	SELECT
+		a.attname AS column_name,
+		pg_catalog.format_type(a.atttypid, a.atttypmod) AS type
+	FROM
+		pg_class c,
+		pg_attribute a,
+		pg_type t
+	WHERE
+		t.oid = {} AND
+		a.attnum > 0 AND
+		a.attrelid = c.oid AND
+		a.atttypid = t.oid
+	ORDER BY a.attnum
+) AS tabledefinition;'''
+
+# noinspection SqlResolve
 select_not_nullable_sql = '''SELECT
 	a.attname AS column_name
 FROM

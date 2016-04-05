@@ -30,10 +30,12 @@ class Statement(object):
 	def execute(self, cursor=None):
 		if cursor:
 			self._execute(cursor)
+			results = cursor.fetchall()
 		else:
-			with self.table.cursor_manager() as cursor:
+			with self.table.parent.cursor_manager() as cursor:
 				self._execute(cursor)
-		return self.table_name
+				results = cursor.results
+		return results
 
 	def _execute(self, cursor):
 		# if 'SELECT' in self.sql or 'CREATE' in self.sql or ('DELETE' in self.sql and 'IN' not in self.sql):

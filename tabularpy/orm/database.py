@@ -1,3 +1,5 @@
+import cgitb
+from . import postgres
 from .statements import TableCopy
 from .table import Table
 from .conditions import And
@@ -17,8 +19,8 @@ class Database(object):
 			self.log = logging.getLogger('sql_manager_dummy')
 			self.log.info('Initializing Sql Manager')
 		self.name = None
-		self.cursor = None
 		self.t = None
+		self.type_ = None
 
 	def reflect(self, name=None):
 		if name:
@@ -33,11 +35,10 @@ class Database(object):
 		self.t = Tables(self.tables)
 
 	def get_name(self):
-		cursor = self.connection.cursor()
-		cursor.execute('SELECT current_database();')
-		name = cursor.fetchone()[0]
-		cursor.close()
-		return name
+		with self.cursor_manager() as cursor:
+			cursor.execute('SELECT current_database();')
+			name = cursor.fetchone()[0]
+			return name
 
 	def get_table(self, name):
 		for table in self.tables:
@@ -45,30 +46,28 @@ class Database(object):
 				return table
 
 	def get_table_names(self):
-		cursor = self.connection.cursor()
-		# noinspection SqlResolve
-		cursor.execute(
-			"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
-		)
-		names = tuple(table[0] for table in cursor.fetchall())
-		cursor.close()
-		return names
+		with self.cursor_manager() as cursor:
+			# noinspection SqlResolve
+			cursor.execute(
+				"SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' ORDER BY table_name"
+			)
+			results = cursor.fetchall()
+			names = tuple(table[0] for table in results)
+			return names
 
 	def get_current_seq_val(self, name):
-		cursor = self.connection.cursor()
-		# noinspection SqlResolve
-		cursor.execute('SELECT last_value FROM {};'.format(name))
-		seq_val = cursor.fetchone()[0]
-		cursor.close()
-		return seq_val
+		with self.cursor_manager() as cursor:
+			# noinspection SqlResolve
+			cursor.execute('SELECT last_value FROM {};'.format(name))
+			seq_val = cursor.fetchone()[0]
+			return seq_val
 
 	def get_next_seq_val(self, name):
-		cursor = self.connection.cursor()
-		# noinspection SqlResolve
-		cursor.execute("SELECT nextval('{}');".format(name))
-		seq_val = cursor.fetchone()[0]
-		cursor.close()
-		return seq_val
+		with self.cursor_manager() as cursor:
+			# noinspection SqlResolve
+			cursor.execute("SELECT nextval('{}');".format(name))
+			seq_val = cursor.fetchone()[0]
+			return seq_val
 
 	def add_table(self, table):
 		table.parent = self
@@ -99,20 +98,25 @@ class Database(object):
 		try:
 			# noinspection PyUnresolvedReferences
 			import psycopg2
-			self.connection = psycopg2.connect(connection_string)
+			self.connection = psycopg2.connect(connection_string, cursor_factory=postgres.TableCursor)
 			self.name = self.get_name()
+			self.type_ = 'PostgreSQL'
 		except ImportError:
 			raise ImportError('Psycopg2 must be installed to create a PostgreSql connection')
 
 	def get_cursor(self):
 		return self.connection.cursor()
 
+	def cursor_manager(self):
+		return cursormanager(self)
+
 	def commit(self):
 		self.connection.commit()
 
+	def rollback(self):
+		self.connection.rollback()
+
 	def close(self):
-		if self.cursor:
-			self.cursor.close()
 		self.connection.close()
 
 	def has_table(self, name):
@@ -140,3 +144,31 @@ class Tables(object):
 			if item == table.name:
 				return table
 		raise AttributeError
+
+
+class cursormanager(object):
+	def __init__(self, database):
+		self.database = database
+		self.cursor = None
+
+	def __enter__(self):
+		self.cursor = self.database.connection.cursor()
+		self.cursor.database = self.database
+		return self.cursor
+
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		# noinspection PyBroadException
+		try:
+			if exc_type or exc_val or exc_tb:
+				self.database.log.error(cgitb.text((exc_type, exc_val, exc_tb)))
+				self.database.rollback()
+			else:
+				if self.database.type_ == 'PostgreSQL':
+					self.cursor.fetchall()
+				else:
+					self.database.results_buffer = self.cursor.fetchall()
+		except Exception:
+			pass
+		finally:
+			self.cursor.close()
+			self.database.commit()
