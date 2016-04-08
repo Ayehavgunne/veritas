@@ -108,7 +108,7 @@ class Table(object):
 	def query_primary_keys(self):
 		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_pkey_sql.format(self.name))
-			return (row[0] for row in cursor.fetchall())
+			return (str(row[0]) for row in cursor.fetchall())
 
 	def reflect_primary_keys(self):
 		self.primary_keys = list(self.query_primary_keys())
@@ -116,7 +116,7 @@ class Table(object):
 	def query_serials(self):
 		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_serial_sql.format(self.name))
-			return {str(row[0]): row[1] for row in cursor.fetchall()}
+			return {str(row[0]): str(row[1]) for row in cursor.fetchall()}
 
 	def reflect_serials(self):
 		self.serials = []
@@ -132,7 +132,7 @@ class Table(object):
 	def query_indexes(self):
 		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_index_sql.format(self.name))
-			return (row[0] for row in cursor.fetchall())
+			return (str(row[0]) for row in cursor.fetchall())
 
 	def reflect_indexes(self):
 		self.indexes = list(self.query_indexes())
@@ -140,7 +140,7 @@ class Table(object):
 	def query_not_nullables(self):
 		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_not_nullable_sql.format(self.name))
-			return (row[0] for row in cursor.fetchall())
+			return (str(row[0]) for row in cursor.fetchall())
 
 	def reflect_not_nullables(self):
 		for name in self.query_not_nullables():
@@ -149,7 +149,7 @@ class Table(object):
 	def query_constraints(self):
 		with self.parent.cursor_manager() as cursor:
 			cursor.execute(select_contraints_sql.format(self.name))
-			return {str(row[0]): row[1] for row in cursor.fetchall()}
+			return {str(row[0]): str(row[1]) for row in cursor.fetchall()}
 
 	def reflect_constraints(self):
 		self.uniques = []
@@ -160,7 +160,7 @@ class Table(object):
 				self.uniques.append(name)
 			# TODO: Add more constraint types
 
-	def add_table_data(self, data):
+	def add_data(self, data):
 		if self.columns:
 			for header in data.headers:
 				if not self.has_column(header):
@@ -264,6 +264,7 @@ class Table(object):
 			else:
 				self.delete(on[0]).where(self.tuple_(on[0]).in_(on)).execute(cursor)
 			self.insert().execute(cursor)
+		return statements.BlankStatement(self)
 
 	def delete(self, *on, cascaded=False):
 		return statements.Delete(self, *on, cascaded)

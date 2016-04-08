@@ -18,8 +18,9 @@ if psycopg2:
 			psycopg2.extensions.cursor.execute(self, sql, args)
 
 		def fetchall(self):
-			self.results.fill_buffer(psycopg2.extensions.cursor.fetchall(self))
-			return self.results
+			if self.results:
+				self.results.fill_buffer(psycopg2.extensions.cursor.fetchall(self))
+				return self.results
 
 		def scalar(self):
 			return psycopg2.extensions.cursor.fetchone(self)[0]

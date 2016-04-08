@@ -1,21 +1,3 @@
-id_headers = [
-	'Spid',
-	'spid',
-	'bill_payment_tran_id',
-	'bill payment tran id',
-	'cart_item_id',
-	'cart item id',
-	'call_flow_id',
-	'call flow id',
-	'acct_num',
-	'acct num',
-	'user_id',
-	'user id',
-	'payment_review_id',
-	'payment review id'
-]
-
-
 class Settings(object):
 	def __init__(
 		self, ignore_none=False, datetime_format='%m/%d/%y %I:%M %p', date_format='%m/%d/%y',
@@ -32,4 +14,4 @@ class Settings(object):
 		self.int_comma = int_comma
 		self.dec_comma = dec_comma
 		self.float_comma = float_comma
-		self.dont_format = list(dont_format) + id_headers
+		self.dont_format = list(dont_format)

@@ -1010,7 +1010,7 @@ class IntCell(BaseCell):
 
 	def __str__(self):
 		if self.value is not None:
-			if self._settings.int_comma and self.header not in self._settings.dont_format:
+			if self._settings.int_comma and self.header.lower() not in self._settings.dont_format:
 				return '{:,}'.format(self.value)
 			else:
 				return str(self.value)
@@ -1386,7 +1386,7 @@ class FloatCell(BaseCell):
 
 	def __str__(self):
 		if self.value is not None:
-			if self._settings.float_comma and self.header not in self._settings.dont_format:
+			if self._settings.float_comma and self.header.lower() not in self._settings.dont_format:
 				return '{:,}'.format(self.value)
 			else:
 				return str(self.value)
@@ -1746,7 +1746,7 @@ class DecimalCell(BaseCell):
 
 	def __str__(self):
 		if self.value is not None:
-			if self._settings.dec_comma and self.header not in self._settings.dont_format:
+			if self._settings.dec_comma and self.header.lower() not in self._settings.dont_format:
 				return '{:,}'.format(self.value)
 			else:
 				return str(self.value)

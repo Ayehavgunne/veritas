@@ -3,7 +3,6 @@ from ..row import Row
 from .. import tables
 
 
-# TODO: Enhance this class to provide the results in a more robust way
 class Results(object):
 	def __init__(self, cursor, database):
 		self.cursor = cursor

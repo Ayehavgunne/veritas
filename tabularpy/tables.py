@@ -143,7 +143,8 @@ class BaseTable(metaclass=ABCMeta):
 				self.column_types[name] = col_type
 			else:
 				self.column_types[name] = None
-				self.guess_types()
+				if self.num_rows:
+					self.guess_types()
 			self.num_cols += 1
 		else:
 			raise ValueError('shape of column does not match table')
@@ -827,6 +828,7 @@ class BaseTable(metaclass=ABCMeta):
 	def _has_column(self, col):
 		if col in self.headers:
 			return True
+		return False
 
 	def _get_column(self, header):
 		if self._has_column(header):
@@ -842,13 +844,9 @@ class BaseTable(metaclass=ABCMeta):
 			raise AttributeError('{} does not have column {}'.format(self, header))
 
 	def _has_row(self, row_num):
-		if isinstance(row_num, int):
-			if row_num < self.num_rows:
-				return True
-			else:
-				raise IndexError('{} is out of range'.format(row_num))
-		else:
-			raise ValueError('{} is not of type int'.format(type(row_num)))
+		if row_num < self.num_rows:
+			return True
+		return False
 
 	def _get_row(self, row_num):
 		if self._has_row(row_num):
@@ -1016,6 +1014,8 @@ class BaseTable(metaclass=ABCMeta):
 					return self.copy()
 			else:
 				raise ValueError('Columns do not match')
+		elif other is None:
+			return self.copy()
 		else:
 			raise TypeError("unsupported operand type(s) for +: 'Table' and {}".format(type(other)))
 

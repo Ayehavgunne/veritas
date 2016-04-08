@@ -24,9 +24,6 @@ class Statement(object):
 				else:
 					self.sql = '{} AND {}'.format(self.sql, condition)
 
-	def limit(self, num_rows):
-		return Limit(self.table, self.sql, num_rows)
-
 	def execute(self, cursor=None):
 		if cursor:
 			self._execute(cursor)
@@ -38,7 +35,6 @@ class Statement(object):
 		return results
 
 	def _execute(self, cursor):
-		# if 'SELECT' in self.sql or 'CREATE' in self.sql or ('DELETE' in self.sql and 'IN' not in self.sql):
 		if self.table.data:
 			if self.on:
 				cursor.executemany(self.sql, self.table.data.to_list_of_dicts(*self.on))
@@ -79,22 +75,6 @@ class CreateTemp(Statement):
 	def __init__(self, table, original_name):
 		super().__init__(table)
 		self.sql = 'CREATE TABLE {} AS SELECT * FROM {} LIMIT 0;'.format(table.name, original_name)
-		# self.sql = 'CREATE TEMP TABLE {}'.format(self.table_name)
-		# columns = '('
-		# for column in self.table.columns:
-		# 	columns = '{}{}, '.format(columns, column)
-		# if self.table.primary_keys:
-		# 	columns = '{}CONSTRAINT {}_pkey PRIMARY KEY ('.format(columns, self.table_name)
-		# 	for column in self.table.primary_keys:
-		# 		columns = '{}{}, '.format(columns, column)
-		# 	columns = '{}), '.format(columns[:-2])
-		# if self.table.uniques:
-		# 	for unq in self.table.uniques:
-		# 		columns = '{0}CONSTRAINT {1}_{2}_key UNIQUE ({2}), '.format(columns, self.table_name, unq)
-		# self.sql = '{}{});'.format(self.sql, columns[:-2])
-		# if self.table.indexes:
-		# 	for idx in self.table.indexes:
-		# 		self.sql = '{0} CREATE INDEX {1}_{2}_idx ON {1} USING btree ({2});'.format(self.sql, self.table_name, idx)
 
 
 class TableCopy(Statement):
@@ -127,6 +107,9 @@ class Select(Statement):
 
 	def order_by(self, *columns):
 		return OrderBy(self.table, self.sql, *columns)
+
+	def limit(self, num_rows):
+		return Limit(self.table, self.sql, num_rows)
 
 
 class Insert(Statement):
@@ -194,6 +177,9 @@ class Where(Statement):
 	def order_by(self, *columns):
 		return OrderBy(self.table, self.sql, *columns)
 
+	def limit(self, num_rows):
+		return Limit(self.table, self.sql, num_rows)
+
 
 class OrderBy(Statement):
 	def __init__(self, table, sql, *columns):
@@ -204,6 +190,9 @@ class OrderBy(Statement):
 			if column.desc:
 				self.sql = '{} DESC, '.format(self.sql[:-2])
 		self.sql = '{}'.format(self.sql[:-2])
+
+	def limit(self, num_rows):
+		return Limit(self.table, self.sql, num_rows)
 
 
 class Limit(Statement):
@@ -219,3 +208,14 @@ class Tuple(Statement):
 
 	def in_(self, iterable):
 		return '{} {}'.format(self.sql, In(iterable))
+
+	def limit(self, num_rows):
+		return Limit(self.table, self.sql, num_rows)
+
+
+class BlankStatement(Statement):
+	def __init__(self, table):
+		super().__init__(table)
+
+	def execute(self, cursor=None):
+		pass
