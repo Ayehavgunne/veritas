@@ -1,10 +1,10 @@
 import cgitb
+from .operators import And
+from .operators import Or
+from .operators import Not
 from . import postgres
 from .statements import TableCopy
 from .table import Table
-from .conditions import And
-from .conditions import Not
-from .conditions import Or
 
 
 # TODO: Add ability to create temp tables based on other tables and copy information between them

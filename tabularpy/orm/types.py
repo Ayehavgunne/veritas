@@ -39,7 +39,7 @@ class Integer(Type):
 		return 'INTEGER'
 
 
-class BigInt(Type):
+class BigInt(Integer):
 	def __str__(self):
 		return 'BIGINT'
 
@@ -101,11 +101,16 @@ class Timestamp(Type):
 		return 'TIMESTAMP WITHOUT TIMEZONE'
 
 
-class TimeTimezone(Type):
+class TimeWithTimezone(Time):
 	def __str__(self):
 		return 'TIME WITH TIMEZONE'
 
 
-class TimestampTimezone(Type):
+class TimestampWithTimezone(Timestamp):
 	def __str__(self):
 		return 'TIMESTAMP WITH TIMEZONE'
+
+
+class Null(Type):
+	def __str__(self):
+		return 'NULL'

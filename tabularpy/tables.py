@@ -11,14 +11,8 @@ from decimal import Decimal
 from functools import reduce
 from os.path import isfile
 from . import Settings
-from .orm.conditions import Condition
-from .orm.conditions import ConditionLogic
-from .orm.conditions import And
-from .orm.conditions import Or
-from .orm.conditions import Not
-from .orm.conditions import ColRef
-from .orm.conditions import Operand
-from .orm.operators import Operator
+# from .orm.conditions import Condition
+# from .orm.operators import Operator
 from .cells import StrCell
 from .cells import get_cell_of_type
 from .col import Col
@@ -456,66 +450,68 @@ class BaseTable(metaclass=ABCMeta):
 		return w
 
 	def where(self, *conditions, w=None):
-		if not w:
-			w = self.copy()
-		for condition in conditions:
-			if isinstance(condition, Condition):
-				w = self.filter(condition, w)
-			elif isinstance(condition, ConditionLogic):
-				if isinstance(condition, And):
-					w = self.where_and(w, *condition.conditions)
-				elif isinstance(condition, Or):
-					w = self.where_or(w, *condition.conditions)
-				elif isinstance(condition, Not):
-					w = self.where_not(w, condition.conditions)
-		return w
+		pass
+		# if not w:
+		# 	w = self.copy()
+		# for condition in conditions:
+		# 	if isinstance(condition, Condition):
+		# 		w = self.filter(condition, w)
+		# 	elif isinstance(condition, ConditionLogic):
+		# 		if isinstance(condition, And):
+		# 			w = self.where_and(w, *condition.conditions)
+		# 		elif isinstance(condition, Or):
+		# 			w = self.where_or(w, *condition.conditions)
+		# 		elif isinstance(condition, Not):
+		# 			w = self.where_not(w, condition.conditions)
+		# return w
 
 	def filter(self, condition, t=None):
-		if not t:
-			table = self.copy()
-		else:
-			table = t.copy()
-		col = None
-		operator = None
-		val = None
-		for token in condition.tokens:
-			if isinstance(token, ColRef):
-				if table._has_column(token.column.name):
-					col = token.column.name
-				else:
-					return
-			elif isinstance(token, Operator):
-				operator = token.operator
-			elif isinstance(token, Operand):
-				val = token.operand
-			else:
-				continue
-		val = get_cell_of_type(table.column_types[col])(val, col, None, table.column_types[col], None, None, Settings())
-		if operator == '=' or operator == 'IS':
-			for row in reversed(table):
-				if not row[col] == val:
-					table.pop_row(row.row_num)
-		elif operator == '!=':
-			for row in reversed(table):
-				if row[col] == val:
-					table.pop_row(row.row_num)
-		elif operator == '<':
-			for row in reversed(table):
-				if not row[col] < val:
-					table.pop_row(row.row_num)
-		elif operator == '>':
-			for row in reversed(table):
-				if not row[col] > val:
-					table.pop_row(row.row_num)
-		elif operator == '<=':
-			for row in reversed(table):
-				if not row[col] <= val:
-					table.pop_row(row.row_num)
-		elif operator == '>=':
-			for row in reversed(table):
-				if not row[col] >= val:
-					table.pop_row(row.row_num)
-		return table
+		pass
+		# if not t:
+		# 	table = self.copy()
+		# else:
+		# 	table = t.copy()
+		# col = None
+		# operator = None
+		# val = None
+		# for token in condition.tokens:
+		# 	if isinstance(token, ColRef):
+		# 		if table._has_column(token.column.name):
+		# 			col = token.column.name
+		# 		else:
+		# 			return
+		# 	elif isinstance(token, Operator):
+		# 		operator = token.operator
+		# 	elif isinstance(token, Operand):
+		# 		val = token.operand
+		# 	else:
+		# 		continue
+		# val = get_cell_of_type(table.column_types[col])(val, col, None, table.column_types[col], None, None, Settings())
+		# if operator == '=' or operator == 'IS':
+		# 	for row in reversed(table):
+		# 		if not row[col] == val:
+		# 			table.pop_row(row.row_num)
+		# elif operator == '!=':
+		# 	for row in reversed(table):
+		# 		if row[col] == val:
+		# 			table.pop_row(row.row_num)
+		# elif operator == '<':
+		# 	for row in reversed(table):
+		# 		if not row[col] < val:
+		# 			table.pop_row(row.row_num)
+		# elif operator == '>':
+		# 	for row in reversed(table):
+		# 		if not row[col] > val:
+		# 			table.pop_row(row.row_num)
+		# elif operator == '<=':
+		# 	for row in reversed(table):
+		# 		if not row[col] <= val:
+		# 			table.pop_row(row.row_num)
+		# elif operator == '>=':
+		# 	for row in reversed(table):
+		# 		if not row[col] >= val:
+		# 			table.pop_row(row.row_num)
+		# return table
 
 	def by_columns(self):
 		return (self._get_column(header) for header in self.headers)

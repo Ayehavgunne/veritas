@@ -1,16 +1,6 @@
 from .column import Column
 from . import statements
-from .types import Varchar
-from .types import BigInt
-from .types import Percent
-from .types import Integer
-from .types import Numeric
-from .types import Money
-from .types import Boolean
-from .types import Date
-from .types import Timestamp
-from .types import Time
-from .types import Interval
+from . import types
 from ..util import select_column_names_sql
 from ..util import select_serial_sql
 from ..util import select_types_sql
@@ -80,29 +70,29 @@ class Table(object):
 		for name, col_type in self.query_column_types().items():
 			col_type = col_type.lower()
 			if 'varchar' in name or 'character varying' in col_type:
-				type_ = Varchar()
+				type_ = types.Varchar()
 			elif col_type == 'integer':
-				type_ = Integer()
+				type_ = types.Integer()
 			elif col_type == 'bigint':
-				type_ = BigInt()
+				type_ = types.BigInt()
 			elif 'numeric' in col_type:
-				type_ = Numeric()
+				type_ = types.Numeric()
 			elif col_type == 'percent':
-				type_ = Percent()
+				type_ = types.Percent()
 			elif col_type == 'money':
-				type_ = Money()
+				type_ = types.Money()
 			elif col_type == 'boolean':
-				type_ = Boolean()
+				type_ = types.Boolean()
 			elif col_type == 'date':
-				type_ = Date()
+				type_ = types.Date()
 			elif 'timestamp' in col_type:
-				type_ = Timestamp()
+				type_ = types.Timestamp()
 			elif 'time' in col_type:
-				type_ = Time()
+				type_ = types.Time()
 			elif col_type == 'interval':
-				type_ = Interval()
+				type_ = types.Interval()
 			else:
-				type_ = Varchar()
+				type_ = types.Varchar()
 			self.columns.append(Column(name, type_))
 
 	def query_primary_keys(self):
@@ -247,7 +237,6 @@ class Table(object):
 	def insert(self):
 		if not self.data:
 			raise AttributeError('The table must have data to insert with first')
-
 		return statements.Insert(self)
 
 	def update(self):

@@ -1,5 +1,5 @@
 from .column import Column
-from ..row import Row
+from .. import row as row_mod
 from .. import tables
 
 
@@ -17,7 +17,7 @@ class Results(object):
 	def __next__(self):
 		if self._i < len(self.buffer):
 			row = self.buffer[self._i]
-			row = Row(
+			row = row_mod.Row(
 				list(row),
 				self.get_column_names(),
 				self.get_column_types(),

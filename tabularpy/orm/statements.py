@@ -1,6 +1,8 @@
+from tabularpy.orm.conditions import Condition
 from . import database
 from . import table as tbl
 from .operators import In
+from .operators import Desc
 from .column import Column
 
 
@@ -99,7 +101,10 @@ class Select(Statement):
 		if not columns:
 			self.sql = '{} *, '.format(self.sql)
 		for column in columns:
-			self.sql = '{}{}, '.format(self.sql, column.name)
+			if isinstance(column, Condition):
+				self.sql = '{} {}, '.format(self.sql, column)
+			else:
+				self.sql = '{}{}, '.format(self.sql, column.name)
 		self.sql = '{} FROM {}'.format(self.sql[:-2], self.table.name)
 
 	def where(self, *conditions):
@@ -159,6 +164,12 @@ class Delete(Statement):
 		return Where(self.table, self.sql, *conditions)
 
 
+class InnerJoin(Statement):
+	def __init__(self, table1, table2, *conditions):
+		super().__init__(table1)
+		self.sql = 'INNER JOIN {} ON'.format(table2.name)
+
+
 class Drop(Statement):
 	def __init__(self, table, cascaded=False):
 		super().__init__(table)
@@ -184,11 +195,12 @@ class Where(Statement):
 class OrderBy(Statement):
 	def __init__(self, table, sql, *columns):
 		super().__init__(table)
-		self.sql = '{} ORDER BY '.format(sql)
+		self.sql = '{} ORDER BY'.format(sql)
 		for column in columns:
-			self.sql = '{} {}, '.format(self.sql, column.name)
-			if column.desc:
-				self.sql = '{} DESC, '.format(self.sql[:-2])
+			if isinstance(column, Desc):
+				self.sql = '{} {}, '.format(self.sql, column)
+			else:
+				self.sql = '{} {}, '.format(self.sql, column.name)
 		self.sql = '{}'.format(self.sql[:-2])
 
 	def limit(self, num_rows):
