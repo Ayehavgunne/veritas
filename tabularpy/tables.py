@@ -181,7 +181,7 @@ class BaseTable(metaclass=ABCMeta):
 		self.column_types[column] = type_
 
 	def format_cells(self, cell_formatter, replace=True):
-		arg_len = len(inspect.signature(cell_formatter).args)
+		arg_len = len(inspect.signature(cell_formatter).parameters)
 		if arg_len == 1:
 			for key in self._table_data:
 				for x, c in enumerate(self._table_data[key]):
@@ -192,7 +192,7 @@ class BaseTable(metaclass=ABCMeta):
 					self._table_data[key] = cell_formatter(self._table_data[key], self.column_types.get(key, None))
 				else:
 					self._table_data[key] = cell_formatter(self._table_data[key], None)
-		elif arg_len == 3:
+		elif arg_len >= 3:
 			for key in self._table_data:
 				if self.column_types:
 					self._table_data[key] = cell_formatter(self._table_data[key], self.column_types.get(key, None), key)
@@ -202,7 +202,7 @@ class BaseTable(metaclass=ABCMeta):
 			self._settings.cell_formatter = cell_formatter
 
 	def format_column(self, column, formatter):
-		arg_len = len(inspect.signature(formatter).args)
+		arg_len = len(inspect.signature(formatter).parameters)
 		if arg_len == 1:
 			for x, c in enumerate(self._table_data[column]):
 				self._table_data[column][x] = formatter(c)
@@ -212,7 +212,7 @@ class BaseTable(metaclass=ABCMeta):
 					self._table_data[column] = formatter(self._table_data[column], self.column_types.get(column, None))
 				else:
 					self._table_data[column] = formatter(self._table_data[column], None)
-		elif arg_len == 3:
+		elif arg_len >= 3:
 			if self._has_column(column):
 				if self.column_types:
 					self._table_data[column] = formatter(self._table_data[column], self.column_types.get(column, None), column)
