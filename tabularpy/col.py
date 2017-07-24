@@ -1,8 +1,6 @@
 from decimal import Decimal
 from . import Settings
-from .cells import get_cell_of_type
-from .cells import BaseCell
-from .cells import StrCell
+from .cell import Cell
 
 
 class Col(object):
@@ -23,14 +21,21 @@ class Col(object):
 	def to_list(self):
 		return self.cells
 
+	def is_numeric(self):
+		if self.column_type.lower() in ['integer', 'decimal', 'float', 'percent', 'money']:
+			return True
+		else:
+			return False
+
 	def sum(self):
 		return sum([Decimal(str(cell).replace(',', '')) for cell in self.cells if cell != '' and cell is not None])
 
+	def replace(self, old, new):
+		for x, cell in enumerate(self.cells):
+			self.cells[x] = Cell(cell, self.header, x, self.col_num, self, self._settings).replace(old, new)
+
 	def get_cell(self, x):
-		cell_type = get_cell_of_type(self.column_type)
-		if cell_type is None:
-			return StrCell(self.cells[x], self.header, x, self.col_num, self, self._settings)
-		return cell_type(self.cells[x], self.header, x, self.col_num, self, self._settings)
+		return Cell(self.cells[x], self.header, x, self.col_num, self, self._settings)
 
 	def to_html(self, add_attr=None, row_total=False):
 		if add_attr:
@@ -57,9 +62,9 @@ class Col(object):
 		return self.get_cell(item)
 
 	def __setitem__(self, key, value):
-		if isinstance(key, BaseCell):
+		if isinstance(key, Cell):
 			key = key.value
-		if isinstance(value, BaseCell):
+		if isinstance(value, Cell):
 			value = value.value
 		if isinstance(key, int):
 			if key < len(self.cells):

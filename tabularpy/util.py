@@ -1,5 +1,6 @@
 import copy
 import re
+import html
 from pathlib import Path
 from collections import defaultdict
 from collections import OrderedDict
@@ -161,6 +162,8 @@ def parse_date_time_string(value, str_format):
 			value = parse(value)
 		except ImportError:
 			value = datetime.strptime(value, str_format)
+		except ValueError:
+			pass
 	return value
 
 
@@ -181,9 +184,9 @@ class HtmlParser(HTMLParser):
 		self._hidden_rows = []
 		self._td = {'table': {}, 'headers': [], 'footers': [], 'column_types': {}}
 
-	def parse(self, html):
+	def parse(self, htm):
 		self.reset()
-		self.feed(html)
+		self.feed(htm)
 		return self._td
 
 	def handle_starttag(self, tag, attrs):
@@ -227,7 +230,7 @@ class HtmlParser(HTMLParser):
 						self._td['column_types'][header] = last_open_attrs
 					self._data = []
 			if tag == last_open_tag:
-				self._open_tags.pop()  # poppin tags :)
+				self._open_tags.pop()
 				self._open_tag_attrs.pop()
 
 	def handle_data(self, data):
@@ -237,8 +240,7 @@ class HtmlParser(HTMLParser):
 		self.handle_entityref("#" + ref)
 
 	def handle_entityref(self, ref):
-		# noinspection PyDeprecation
-		self.handle_data(self.unescape("&{};".format(ref)))
+		self.handle_data(html.unescape("&{};".format(ref)))
 
 	def error(self, message):
 		print(message)
@@ -249,7 +251,7 @@ class BeautifulSoupParser(object):
 		self.soup = None
 		self.parser = parser
 
-	def parse(self, html):
+	def parse(self, htm):
 		try:
 			# noinspection PyUnresolvedReferences
 			from bs4 import BeautifulSoup
@@ -257,7 +259,7 @@ class BeautifulSoupParser(object):
 			print('Need to install BeautifulSoup4 or use the standard HTML Parser')
 			raise
 		td = {'table': {}, 'headers': [], 'footers': [], 'column_types': {}}
-		self.soup = BeautifulSoup(html, self.parser)
+		self.soup = BeautifulSoup(htm, self.parser)
 		self.normalize_html()
 		table = self.soup.find('table')
 		for x, header in enumerate(table.find('thead').find('tr').find_all('th')):
@@ -358,144 +360,3 @@ def open_xls_as_xlsx(filename):
 	except ImportError:
 		print('xlrd and openpyxl are required in order to convert an xls file to xlsx')
 		raise
-
-# noinspection SqlResolve
-select_column_names_sql = '''SELECT
-	a.attname AS column_name
-FROM
-	pg_class c,
-	pg_attribute a
-WHERE
-	c.relname = '{}' AND
-	a.attnum > 0 AND
-	a.attrelid = c.oid AND
-	a.attname NOT LIKE '%pg.dropped%'
-ORDER BY a.attname;'''
-
-# noinspection SqlResolve
-select_types_sql = '''SELECT
-	column_name,
-	UPPER(type)
-FROM (
-	SELECT
-		a.attname AS column_name,
-		pg_catalog.format_type(a.atttypid, a.atttypmod) AS type
-	FROM
-		pg_class c,
-		pg_attribute a,
-		pg_type t
-	WHERE
-		c.relname = '{}' AND
-		a.attnum > 0 AND
-		a.attrelid = c.oid AND
-		a.atttypid = t.oid
-	ORDER BY a.attnum
-) AS tabledefinition;'''
-
-# noinspection SqlResolve
-select_query_types_sql = '''SELECT
-	column_name,
-	UPPER(type)
-FROM (
-	SELECT
-		a.attname AS column_name,
-		pg_catalog.format_type(a.atttypid, a.atttypmod) AS type
-	FROM
-		pg_class c,
-		pg_attribute a,
-		pg_type t
-	WHERE
-		t.oid = {} AND
-		a.attnum > 0 AND
-		a.attrelid = c.oid AND
-		a.atttypid = t.oid
-	ORDER BY a.attnum
-) AS tabledefinition;'''
-
-# noinspection SqlResolve
-select_not_nullable_sql = '''SELECT
-	a.attname AS column_name
-FROM
-	pg_class c,
-	pg_attribute a
-WHERE
-	c.relname = '{}' AND
-	a.attnum > 0 AND
-	a.attrelid = c.oid AND
-	a.attnotnull
-ORDER BY a.attnum;'''
-
-# noinspection SqlResolve
-select_pkey_sql = '''SELECT
-	a.attname
-FROM
-	pg_index AS i
-JOIN
-	pg_attribute a ON a.attrelid = i.indrelid AND
-	a.attnum = ANY(i.indkey)
-WHERE
-	i.indrelid = '{}'::regclass AND
-	i.indisprimary;'''
-
-# noinspection SqlResolve
-select_serial_sql = '''WITH sequences AS (
-	SELECT
-		oid,
-		relname AS sequencename
-	FROM
-		pg_class
-	WHERE
-		relkind = 'S'
-)
-SELECT
-	col.attname AS columnname,
-	seqs.sequencename
-FROM
-	pg_attribute col
-JOIN
-	pg_class tab ON col.attrelid = tab.oid
-JOIN
-	pg_namespace sch ON tab.relnamespace = sch.oid
-LEFT JOIN
-	pg_attrdef def ON tab.oid = def.adrelid AND
-	col.attnum = def.adnum
-LEFT JOIN
-	pg_depend deps ON def.oid = deps.objid AND
-	deps.deptype = 'n'
-LEFT JOIN
-	sequences seqs ON deps.refobjid = seqs.oid
-WHERE
-	tab.relname = '{}' AND
-	sch.nspname != 'information_schema' AND
-	sch.nspname NOT LIKE 'pg_%' AND
-	col.attnum > 0 AND
-	seqs.sequencename IS NOT NULL
-ORDER BY
-	col.attname;'''
-
-# noinspection SqlResolve
-select_index_sql = '''SELECT
-	a.attname
-FROM
-	pg_index AS i
-JOIN
-	pg_attribute a ON a.attrelid = i.indrelid AND
-	a.attnum = ANY(i.indkey)
-WHERE
-	i.indrelid = '{}'::regclass AND
-	NOT i.indisprimary;'''
-
-# noinspection SqlResolve
-select_contraints_sql = '''SELECT
-	kcu.column_name,
-	tc.constraint_type
-FROM
-	information_schema.table_constraints AS tc
-LEFT JOIN
-	information_schema.key_column_usage AS kcu
-	ON tc.constraint_catalog = kcu.constraint_catalog AND
-	tc.constraint_schema = kcu.constraint_schema AND
-	tc.constraint_name = kcu.constraint_name
-WHERE
-	tc.table_name = '{}' AND
-	kcu.column_name IS NOT NULL;'''

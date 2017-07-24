@@ -1,10 +1,7 @@
 import inspect
 from decimal import Decimal
-from .orm.column import Column
 from . import Settings
-from .cells import get_cell_of_type
-from .cells import BaseCell
-from .cells import StrCell
+from .cell import Cell
 
 
 class Row(object):
@@ -51,19 +48,17 @@ class Row(object):
 	def sum(self):
 		return sum([Decimal(str(cell).replace(',', '')) for cell in self.cells if cell != '' and cell is not None])
 
+	def replace(self, old, new):
+		for x, cell in enumerate(self.cells):
+			self.cells[x] = Cell(self.cells[x], self.headers[x], self.row_num, x, self, self._settings).replace(old, new)
+
 	def get_cell(self, x):
 		if isinstance(x, str):
 			index = self.headers.index(x)
-			cell_type = get_cell_of_type(self.column_types[x])
-			if cell_type is None:
-				return StrCell(self.cells[index], x, self.row_num, index, self, self._settings)
-			return cell_type(self.cells[index], x, self.row_num, index, self, self._settings)
+			return Cell(self.cells[index], x, self.row_num, index, self, self._settings)
 		elif isinstance(x, int):
 			header = self.headers[x]
-			cell_type = get_cell_of_type(self.column_types[header])
-			if cell_type is None:
-				return StrCell(self.cells[x], header, self.row_num, x, self, self._settings)
-			return cell_type(self.cells[x], header, self.row_num, x, self, self._settings)
+			return Cell(self.cells[x], header, self.row_num, x, self, self._settings)
 
 	def to_html(self, add_attr=None, row_total=False):
 		if add_attr:
@@ -102,10 +97,6 @@ class Row(object):
 				return self.get_cell(idx)
 		elif isinstance(item, int):
 			return self.get_cell(item)
-		elif isinstance(item, Column):
-			if item.name in self.headers:
-				idx = self.headers.index(item.name)
-				return self.get_cell(idx)
 		else:
 			raise TypeError('Cannot access items with type {}'.format(type(item), item))
 		raise ValueError('Row does not have item {}'.format(item))
