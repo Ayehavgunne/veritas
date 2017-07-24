@@ -1151,12 +1151,3 @@ class EmptyTable(BaseTable):
 
 	def _setup(self, obj):
 		self._initialize()
-
-
-class ResultsTable(BaseTable):
-	def __init__(self, headers=None, footers=None, column_types=None, name=None, settings=Settings()):
-		super().__init__(headers, footers, column_types, name, settings)
-		self._setup(None)
-
-	def _setup(self, obj):
-		self._initialize()
