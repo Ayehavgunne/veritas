@@ -102,9 +102,9 @@ class Row(object):
 		raise ValueError('Row does not have item {}'.format(item))
 
 	def __setitem__(self, key, value):
-		if isinstance(key, BaseCell):
+		if isinstance(key, Cell):
 			key = key.value
-		if isinstance(value, BaseCell):
+		if isinstance(value, Cell):
 			value = value.value
 		if isinstance(key, str):
 			if key in self.headers:
