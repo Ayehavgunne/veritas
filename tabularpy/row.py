@@ -1,7 +1,7 @@
 import inspect
 from decimal import Decimal
 from . import Settings
-from .cell import Cell
+from . import cell as c
 
 
 class Row(object):
@@ -50,15 +50,15 @@ class Row(object):
 
 	def replace(self, old, new):
 		for x, cell in enumerate(self.cells):
-			self.cells[x] = Cell(self.cells[x], self.headers[x], self.row_num, x, self, self._settings).replace(old, new)
+			self.cells[x] = c.Cell(self.cells[x], self.headers[x], self.row_num, x, self, self._settings).replace(old, new)
 
 	def get_cell(self, x):
 		if isinstance(x, str):
 			index = self.headers.index(x)
-			return Cell(self.cells[index], x, self.row_num, index, self, self._settings)
+			return c.Cell(self.cells[index], x, self.row_num, index, self, self._settings)
 		elif isinstance(x, int):
 			header = self.headers[x]
-			return Cell(self.cells[x], header, self.row_num, x, self, self._settings)
+			return c.Cell(self.cells[x], header, self.row_num, x, self, self._settings)
 
 	def to_html(self, add_attr=None, row_total=False):
 		if add_attr:
@@ -102,9 +102,9 @@ class Row(object):
 		raise ValueError('Row does not have item {}'.format(item))
 
 	def __setitem__(self, key, value):
-		if isinstance(key, Cell):
+		if isinstance(key, c.Cell):
 			key = key.value
-		if isinstance(value, Cell):
+		if isinstance(value, c.Cell):
 			value = value.value
 		if isinstance(key, str):
 			if key in self.headers:

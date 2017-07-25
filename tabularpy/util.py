@@ -29,8 +29,8 @@ def avg(x):
 	raise NotImplementedError(x)
 
 
-def sum_aggr(x):
-	return sum(x)
+def sum_aggr(left, right, *args):
+	return left + right
 
 
 def get_sql_query_types(query):
@@ -60,11 +60,7 @@ def getindex(obj, item, default=0):
 
 
 def getindexes(obj, item):
-	indexes = []
-	for i, val in enumerate(obj):
-		if val == item:
-			indexes.append(i)
-	return indexes
+	return [index for index, value in enumerate(obj) if value == item]
 
 
 def rotate_clockwise(matrix, degree=90):

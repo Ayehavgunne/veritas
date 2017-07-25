@@ -254,13 +254,12 @@ class BaseTable(metaclass=ABCMeta):
 							val.count('-') == 0 or (val.count('-') == 1 and val[1] == '-')):
 						type_string = 'integer'
 						col = self[cell.header]
-						for row in col:
-							if row.value is not None:
-								if '.' in row and row.replace('.', '').replace('-', '').isdecimal() and row.count(
-									'.') == 1:
+						for col_cell in col:
+							if col_cell.value is not None:
+								if '.' in col_cell and col_cell.replace('.', '').replace('-', '').isdecimal() and col_cell.count('.') == 1:
 									type_string = 'numeric'
 									break
-								elif int(row.replace(',', '')) < -2147483648 or int(row.replace(',', '')) > 2147483647:
+								elif int(col_cell.replace(',', '')) < -2147483648 or int(col_cell.replace(',', '')) > 2147483647:
 									type_string = 'bigint'
 									break
 						self.column_types[cell.header] = type_string
@@ -518,8 +517,13 @@ class BaseTable(metaclass=ABCMeta):
 
 	def pivot(self, rows=None, columns=None, values=None, aggr_funcs=None, row_sort=None, col_sort=None):
 		if self:
-			distinct_row = list(set(self[rows]))
-			distinct_col = list(set(self[columns]))
+			r = self._table_data[rows]
+			c = self._table_data[columns]
+			v = [int(str(val).replace(',', '')) for val in self._table_data[values]]
+			sr = set(r)
+			sc = set(c)
+			distinct_row = list(sr)
+			distinct_col = list(sc)
 			if row_sort:
 				distinct_row.sort(key=row_sort)
 			else:
@@ -528,26 +532,24 @@ class BaseTable(metaclass=ABCMeta):
 				distinct_col.sort(key=col_sort)
 			else:
 				distinct_col.sort()
-			row_indexes = {}
-			for val in self[rows]:
-				row_indexes[val] = getindexes(self[rows], val)
-			col_indexes = {}
-			for val in self[columns]:
-				col_indexes[val] = getindexes(self[columns], val)
+			row_indexes = {val: getindexes(r, val) for val in distinct_row}
+			col_indexes = {val: getindexes(c, val) for val in distinct_col}
 			list_of_lists = []
 			for y, row_val in enumerate(distinct_row):
-				list_of_lists.append([])
+				list_of_lists.append([row_val])
 				for x, col_val in enumerate(distinct_col):
 					intersection = set(row_indexes[row_val]).intersection(col_indexes[col_val])
 					if intersection:
 						list_of_lists[y].append(0)
 						for n, i in enumerate(intersection):
-							list_of_lists[y][x] = aggr_funcs(list_of_lists[y][x],
-								int(str(self[values][i]).replace(',', '')), n + 1)
+							list_of_lists[y][x + 1] = aggr_funcs(list_of_lists[y][x + 1], v[i], n + 1)
 					else:
 						list_of_lists[y].append(None)
 			column_types = {col: self.column_types[values] for col in distinct_col}
-			return ListOfListsTable(list_of_lists, distinct_col, self.footers, column_types, self.name, self._settings)
+			column_types[rows] = self.column_types[rows]
+			distinct_col.insert(0, rows)
+			result = ListOfListsTable(list_of_lists, distinct_col, self.footers, column_types, self.name, self._settings)
+			return result
 
 	def to_excel(self, formatter=None):
 		try:
@@ -749,8 +751,7 @@ class BaseTable(metaclass=ABCMeta):
 
 	def _get_column(self, header):
 		if self._has_column(header):
-			return Col(self._table_data[header], self.column_types[header], header, self.headers.index(header), self,
-				self._settings)
+			return Col(self._table_data[header], self.column_types[header], header, self.headers.index(header), self, self._settings)
 		else:
 			raise AttributeError('{} does not have column {}'.format(self, header))
 
@@ -761,10 +762,7 @@ class BaseTable(metaclass=ABCMeta):
 
 	def _get_row(self, row_num):
 		if self._has_row(row_num):
-			row = []
-			r_append = row.append
-			for col in self.headers:
-				r_append(self._table_data[col][row_num])
+			row = [self._table_data[col][row_num] for col in self.headers]
 			return Row(row, list(self.headers), self.column_types.copy(), row_num, self, self._settings)
 
 	def __getattr__(self, item):
@@ -922,7 +920,6 @@ class BaseTable(metaclass=ABCMeta):
 	def __eq__(self, other):
 		if not isinstance(other, BaseTable):
 			return False
-		# noinspection PyProtectedMember
 		if self._table_data != other._table_data:
 			return False
 		if self.column_types != other.column_types:
@@ -950,9 +947,6 @@ class CsvTable(BaseTable):
 				self._setup(open_file)
 		else:
 			raise ValueError
-		# except ValueError:
-		# 	with io.StringIO(file_path) as open_file:
-		# 		self._setup(open_file)
 
 	def _setup(self, obj):
 		if self.headers:

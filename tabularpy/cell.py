@@ -8,15 +8,16 @@ locale.setlocale(locale.LC_ALL, '')
 
 
 class Cell(object):
-	__slots__ = ('value', 'header', 'column_type', 'row_num', 'col_num', '_parent', '_settings')
+	__slots__ = ('value', 'header', 'row_num', 'col_num', '_parent', '_settings', '_i')
 
 	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
-		self.value = value
 		self.header = header
 		self.row_num = row_num
 		self.col_num = col_num
 		self._parent = parent
 		self._settings = settings
+		self.value = value
+		self._i = 0
 
 	@property
 	def column_type(self):
@@ -229,6 +230,24 @@ class Cell(object):
 		from math import trunc
 		return self._new(trunc(self.value))
 
+	def __iter__(self):
+		if isinstance(self.value, str):
+			return self
+		else:
+			return NotImplemented
+
+	def __next__(self):
+		if isinstance(self.value, str):
+			if self._i < len(self.value):
+				val = self.value[self._i]
+				self._i += 1
+				return val
+			else:
+				self._i = 0
+				raise StopIteration
+		else:
+			return NotImplemented
+
 	def __len__(self):
 		return len(self.value)
 
@@ -238,3 +257,6 @@ class Cell(object):
 
 	def __str__(self):
 		return str(self.value)
+
+	def __hash__(self):
+		return hash(repr(self.value))
