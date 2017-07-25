@@ -1,6 +1,7 @@
 import copy
 import re
 import html
+import locale
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -40,15 +41,18 @@ def sum_aggr(old, new, _):
 	return old + new
 
 
-def clean_value(value, type_desc, str_format='m/d/yyyy'):
+def clean_value(value, type_desc, str_format=None):
 	value = str(value)
 	type_desc = str(type_desc).lower()
 	if type_desc == 'string' or type_desc == 'varchar':
 		return value
 	elif type_desc == 'integer' or type_desc == 'seconds':
 		return int(value.replace(',', ''))
-	elif type_desc == 'float' or type_desc == 'money' or type_desc == 'percent':
-		return float(value.replace(',', '').replace('$', '').replace('%', ''))
+	elif type_desc == 'float' or type_desc == 'money':
+		return float(value.replace(',', '').replace('$', ''))
+	elif type_desc == 'percent':
+		value = float(value.replace(',', '').replace('%', ''))
+		return value / 100
 	elif type_desc == 'decimal':
 		return Decimal(value)
 	elif type_desc == 'bool':
@@ -57,6 +61,33 @@ def clean_value(value, type_desc, str_format='m/d/yyyy'):
 		return parse_date_time_string(value, str_format)
 	elif type_desc == 'timestamp':
 		return parse_time_delta(value)
+
+
+def format_value(value, type_desc, str_format=None):
+	type_desc = str(type_desc).lower()
+	if type_desc == 'integer' or type_desc == 'seconds':
+		return locale.format('%d', value, grouping=True)
+	elif type_desc == 'float' or type_desc == 'decimal':
+		return locale.format('%f', value, grouping=True)
+	elif type_desc == 'percent':
+		value = value * 100
+		s = str(value)
+		return '{}%'.format(locale.format('%g', Decimal(s.rstrip('0').rstrip('.')), grouping=True) if '.' in s else locale.format('%g', Decimal(s), grouping=True))
+	elif type_desc == 'money':
+		if value < 0:
+			return '-{}'.format(locale.currency(abs(float(value)), grouping=True))
+		else:
+			return locale.currency(float(value), grouping=True)
+	elif type_desc == 'date':
+		if 'month' in type_desc:
+			return value.strftime('%m/%Y')
+		elif 'quarter' in type_desc:
+			return datetime_to_quarter(value)
+		else:
+			return value.strftime('%m/%d/%Y')
+	elif type_desc == 'timestamp' or type_desc == 'time' or type_desc == 'interval':
+		return value.strftime(str_format)
+	return str(value)
 
 
 def get_sql_query_types(query):
@@ -176,7 +207,7 @@ def parse_time_delta(s):
 	return s
 
 
-def parse_date_time_string(value, str_format):
+def parse_date_time_string(value, str_format=None):
 	if isinstance(value, str):
 		try:
 			# noinspection PyUnresolvedReferences

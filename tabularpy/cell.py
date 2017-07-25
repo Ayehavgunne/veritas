@@ -1,6 +1,6 @@
 import locale
 from . import Settings
-from .util import clean_value
+from .util import clean_value, format_value
 from . import tables
 from . import row
 from . import col
@@ -17,25 +17,25 @@ class Cell(object):
 		self.col_num = col_num
 		self._parent = parent
 		self._settings = settings
-		self._value = value
+		self._value = clean_value(value, self.column_type)
 		self._i = 0
 
 	@property
 	def value(self):
-		return clean_value(self._value, self.column_type)
+		return self._value
 
 	@value.setter
 	def value(self, new_val):
-		self._value = new_val
+		self._value = clean_value(new_val, self.column_type)
 
 	@property
 	def column_type(self):
 		if isinstance(self._parent, row.Row):
-			return self._parent.column_types
+			return self._parent.column_types[self.header]
 		elif isinstance(self._parent, col.Col):
 			return self._parent.column_type
 		elif isinstance(self._parent, tables.BaseTable):
-			return self._parent.column_types[self.col_num]
+			return self._parent.column_types[self.header]
 
 	def replace(self, old, new):
 		if isinstance(self.value, str):
@@ -325,7 +325,10 @@ class Cell(object):
 			self.col_num)
 
 	def __str__(self):
-		return str(self.value)
+		if self.header in self._settings.dont_format:
+			return str(self._value)
+		else:
+			return format_value(self._value, self.column_type, self._settings.datetime_format)
 
 	def __hash__(self):
 		return hash(repr(self.value))
