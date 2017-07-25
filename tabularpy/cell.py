@@ -1,5 +1,6 @@
 import locale
 from . import Settings
+from .util import clean_value
 from . import tables
 from . import row
 from . import col
@@ -8,7 +9,7 @@ locale.setlocale(locale.LC_ALL, '')
 
 
 class Cell(object):
-	__slots__ = ('value', 'header', 'row_num', 'col_num', '_parent', '_settings', '_i')
+	__slots__ = ('_value', 'header', 'row_num', 'col_num', '_parent', '_settings', '_i')
 
 	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
 		self.header = header
@@ -16,8 +17,16 @@ class Cell(object):
 		self.col_num = col_num
 		self._parent = parent
 		self._settings = settings
-		self.value = value
+		self._value = value
 		self._i = 0
+
+	@property
+	def value(self):
+		return clean_value(self._value, self.column_type)
+
+	@value.setter
+	def value(self, new_val):
+		self._value = new_val
 
 	@property
 	def column_type(self):
@@ -124,6 +133,48 @@ class Cell(object):
 		else:
 			return self._new(self.value ** other)
 
+	def __radd__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value + self.value)
+		else:
+			return self._new(other + self.value)
+
+	def __rsub__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value - self.value)
+		else:
+			return self._new(other - self.value)
+
+	def __rmul__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value * self.value)
+		else:
+			return self._new(other * self.value)
+
+	def __rfloordiv__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value // self.value)
+		else:
+			return self._new(other // self.value)
+
+	def __rtruediv__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value / self.value)
+		else:
+			return self._new(other / self.value)
+
+	def __rmod__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value % self.value)
+		else:
+			return self._new(other % self.value)
+
+	def __rpow__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value ** self.value)
+		else:
+			return self._new(other ** self.value)
+
 	def __and__(self, other):
 		if isinstance(other, Cell):
 			return self._new(self.value & other.value)
@@ -141,6 +192,24 @@ class Cell(object):
 			return self._new(self.value | other.value)
 		else:
 			return self._new(self.value | other)
+
+	def __rand__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value & self.value)
+		else:
+			return self._new(other & self.value)
+
+	def __rxor__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value ^ self.value)
+		else:
+			return self._new(other ^ self.value)
+
+	def __ror__(self, other):
+		if isinstance(other, Cell):
+			return self._new(other.value | self.value)
+		else:
+			return self._new(other | self.value)
 
 	def __iadd__(self, other):
 		if isinstance(other, Cell):

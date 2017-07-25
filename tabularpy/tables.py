@@ -12,7 +12,7 @@ from . import Settings
 from .col import Col
 from .row import Row
 from .cell import Cell
-from .util import BeautifulSoupParser
+from .util import BeautifulSoupParser, clean_value
 from .util import find_duplicates
 from .util import get_sql_query_types
 from .util import getindexes
@@ -517,39 +517,80 @@ class BaseTable(metaclass=ABCMeta):
 
 	def pivot(self, rows=None, columns=None, values=None, aggr_funcs=None, row_sort=None, col_sort=None):
 		if self:
-			r = self._table_data[rows]
-			c = self._table_data[columns]
-			v = [int(str(val).replace(',', '')) for val in self._table_data[values]]
-			sr = set(r)
-			sc = set(c)
-			distinct_row = list(sr)
-			distinct_col = list(sc)
-			if row_sort:
-				distinct_row.sort(key=row_sort)
-			else:
-				distinct_row.sort()
-			if col_sort:
-				distinct_col.sort(key=col_sort)
-			else:
-				distinct_col.sort()
-			row_indexes = {val: getindexes(r, val) for val in distinct_row}
-			col_indexes = {val: getindexes(c, val) for val in distinct_col}
+			if not isinstance(values, list):
+				raise TypeError('The "values" parameter must be a list of value column headers')
+			r = []
+			distinct_row = []
+			row_indexes = {}
+			c = []
+			distinct_col = []
+			col_indexes = {}
+			column_types = {}
+
+			if rows:
+				r = self._table_data[rows]
+				distinct_row = list(set(r))
+			if columns:
+				c = self._table_data[columns]
+				distinct_col = list(set(c))
+			vs = []  # [[int(str(val).replace(',', ''))] for value in values for val in self._table_data[value]]
+			for value in values:
+				vs.append([clean_value(val, self.column_types[value]) for val in self._table_data[value]])
+			if distinct_row:
+				if row_sort:
+					distinct_row.sort(key=row_sort)
+				else:
+					distinct_row.sort()
+				row_indexes = {val: getindexes(r, val) for val in distinct_row}
+			if distinct_col:
+				if col_sort:
+					distinct_col.sort(key=col_sort)
+				else:
+					distinct_col.sort()
+				col_indexes = {val: getindexes(c, val) for val in distinct_col}
+
 			list_of_lists = []
-			for y, row_val in enumerate(distinct_row):
-				list_of_lists.append([row_val])
-				for x, col_val in enumerate(distinct_col):
-					intersection = set(row_indexes[row_val]).intersection(col_indexes[col_val])
-					if intersection:
+
+			if row_indexes and col_indexes:
+				for y, row_val in enumerate(distinct_row):
+					list_of_lists.append([row_val])
+					for x, col_val in enumerate(distinct_col):
+						intersection = set(row_indexes[row_val]).intersection(col_indexes[col_val])
+						if intersection:
+							list_of_lists[y].append(0)
+							for n, i in enumerate(intersection):
+								# must fix to go through all the values and aggregate functions insead of just the first ones
+								list_of_lists[y][x + 1] = aggr_funcs(list_of_lists[y][x + 1], vs[0][i], n + 1)
+						else:
+							list_of_lists[y].append(None)
+				column_types = {col: self.column_types[values] for col in distinct_col}
+				column_types[rows] = self.column_types[rows]
+				distinct_col.insert(0, rows)
+
+			elif row_indexes:
+				for y, (row_val, n) in enumerate(row_indexes.items()):
+					list_of_lists.append([row_val])
+					for x, v in enumerate(vs):
 						list_of_lists[y].append(0)
-						for n, i in enumerate(intersection):
-							list_of_lists[y][x + 1] = aggr_funcs(list_of_lists[y][x + 1], v[i], n + 1)
-					else:
-						list_of_lists[y].append(None)
-			column_types = {col: self.column_types[values] for col in distinct_col}
-			column_types[rows] = self.column_types[rows]
-			distinct_col.insert(0, rows)
-			result = ListOfListsTable(list_of_lists, distinct_col, self.footers, column_types, self.name, self._settings)
-			return result
+						for i, row in enumerate(n):
+							list_of_lists[y][x + 1] = aggr_funcs[x](list_of_lists[y][x + 1], v[row], i + 1)
+				distinct_col = [rows, *values]
+				column_types = {value: self.column_types[value] for value in values}
+				column_types[rows] = self.column_types[rows]
+
+			elif col_indexes:  # Haven't tried this one yet, probably doesn't work as expected!
+				for y, (col_val, n) in enumerate(col_indexes.items()):
+					list_of_lists.append([col_val])
+					for x, v in enumerate(vs):
+						list_of_lists[y].append(0)
+						for i, row in enumerate(n):
+							list_of_lists[y][x + 1] = aggr_funcs[x](list_of_lists[y][x + 1], v[row], i + 1)
+				distinct_col = [columns, values]
+				column_types = {columns: self.column_types[columns], values: self.column_types[values]}
+				# Should have too transpose the headers (distinct_col) and column_types as well
+				transpose(list_of_lists)
+
+			return ListOfListsTable(list_of_lists, distinct_col, self.footers, column_types, self.name, self._settings)
 
 	def to_excel(self, formatter=None):
 		try:

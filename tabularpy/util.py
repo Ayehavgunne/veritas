@@ -1,36 +1,62 @@
 import copy
 import re
 import html
+from datetime import timedelta
+from decimal import Decimal
 from pathlib import Path
 from collections import defaultdict
 from collections import OrderedDict
 from html.parser import HTMLParser
 from datetime import datetime
-from datetime import timedelta
 
 
-def minimum(x):
-	raise NotImplementedError(x)
+def min_aggr(old, new, _):
+	if new < old:
+		return new
+	else:
+		return old
 
 
-def maximum(x):
-	raise NotImplementedError(x)
+def max_aggr(old, new, _):
+	if new > old:
+		return new
+	else:
+		return old
 
 
-def product(x):
-	raise NotImplementedError(x)
+def product_aggr(old, new, _):
+	return old * new
 
 
-def count(x):
-	raise NotImplementedError(x)
+def count_aggr(*args):
+	return args[2]
 
 
-def avg(x):
-	raise NotImplementedError(x)
+def avg_aggr(mean, new, x):
+	return mean + ((new - mean) / x)
 
 
-def sum_aggr(left, right, *args):
-	return left + right
+def sum_aggr(old, new, _):
+	return old + new
+
+
+def clean_value(value, type_desc, str_format='m/d/yyyy'):
+	value = str(value)
+	type_desc = str(type_desc).lower()
+	if type_desc == 'string' or type_desc == 'varchar':
+		return value
+	elif type_desc == 'integer' or type_desc == 'seconds':
+		return int(value.replace(',', ''))
+	elif type_desc == 'float' or type_desc == 'money' or type_desc == 'percent':
+		return float(value.replace(',', '').replace('$', '').replace('%', ''))
+	elif type_desc == 'decimal':
+		return Decimal(value)
+	elif type_desc == 'bool':
+		return bool(value)
+	elif type_desc == 'date' or type_desc == 'time' or type_desc == 'interval':
+		return parse_date_time_string(value, str_format)
+	elif type_desc == 'timestamp':
+		return parse_time_delta(value)
 
 
 def get_sql_query_types(query):
