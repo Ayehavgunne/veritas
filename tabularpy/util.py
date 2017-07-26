@@ -42,50 +42,52 @@ def sum_aggr(old, new, _):
 
 
 def clean_value(value, type_desc, str_format=None):
-	value = str(value)
-	type_desc = str(type_desc).lower()
-	if type_desc == 'integer' or type_desc == 'int' or type_desc == 'seconds':
-		return int(value.replace(',', ''))
-	elif type_desc == 'float' or type_desc == 'money':
-		return float(value.replace(',', '').replace('$', ''))
-	elif type_desc == 'percent':
-		value = float(value.replace(',', '').replace('%', ''))
-		return value / 100
-	elif type_desc == 'decimal':
-		return Decimal(value)
-	elif type_desc == 'bool':
-		return bool(value)
-	elif type_desc == 'date' or type_desc == 'time' or type_desc == 'interval':
-		return parse_date_time_string(value, str_format)
-	elif type_desc == 'timestamp':
-		return parse_time_delta(value)
+	if value:
+		value = str(value)
+		type_desc = str(type_desc).lower()
+		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'seconds':
+			return int(value.replace(',', ''))
+		elif type_desc == 'float' or type_desc == 'money':
+			return float(value.replace(',', '').replace('$', ''))
+		elif type_desc == 'percent':
+			value = float(value.replace(',', '').replace('%', ''))
+			return value / 100
+		elif type_desc == 'decimal':
+			return Decimal(value)
+		elif type_desc == 'bool':
+			return bool(value)
+		elif type_desc == 'date' or type_desc == 'time' or type_desc == 'interval':
+			return parse_date_time_string(value, str_format)
+		elif type_desc == 'timestamp':
+			return parse_time_delta(value)
 	return value
 
 
 def format_value(value, type_desc, str_format=None):
 	type_desc = str(type_desc).lower()
-	if type_desc == 'integer' or type_desc == 'int' or type_desc == 'seconds':
-		return locale.format('%d', value, grouping=True)
-	elif type_desc == 'float' or type_desc == 'decimal':
-		return locale.format('%f', value, grouping=True)
-	elif type_desc == 'percent':
-		value = value * 100
-		s = str(value)
-		return '{}%'.format(locale.format('%g', Decimal(s.rstrip('0').rstrip('.')), grouping=True) if '.' in s else locale.format('%g', Decimal(s), grouping=True))
-	elif type_desc == 'money':
-		if value < 0:
-			return '-{}'.format(locale.currency(abs(float(value)), grouping=True))
-		else:
-			return locale.currency(float(value), grouping=True)
-	elif type_desc == 'date':
-		if 'month' in type_desc:
-			return value.strftime('%m/%Y')
-		elif 'quarter' in type_desc:
-			return datetime_to_quarter(value)
-		else:
-			return value.strftime('%m/%d/%Y')
-	elif type_desc == 'timestamp' or type_desc == 'time' or type_desc == 'interval':
-		return value.strftime(str_format)
+	if value:
+		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'seconds':
+			return locale.format('%d', value, grouping=True)
+		elif type_desc == 'float' or type_desc == 'decimal':
+			return locale.format('%f', value, grouping=True)
+		elif type_desc == 'percent':
+			value = value * 100
+			s = str(value)
+			return '{}%'.format(locale.format('%g', Decimal(s.rstrip('0').rstrip('.')), grouping=True) if '.' in s else locale.format('%g', Decimal(s), grouping=True))
+		elif type_desc == 'money':
+			if value < 0:
+				return '-{}'.format(locale.currency(abs(float(value)), grouping=True))
+			else:
+				return locale.currency(float(value), grouping=True)
+		elif type_desc == 'date':
+			if 'month' in type_desc:
+				return value.strftime('%m/%Y')
+			elif 'quarter' in type_desc:
+				return datetime_to_quarter(value)
+			else:
+				return value.strftime('%m/%d/%Y')
+		elif type_desc == 'timestamp' or type_desc == 'time' or type_desc == 'interval':
+			return value.strftime(str_format)
 	return str(value)
 
 
