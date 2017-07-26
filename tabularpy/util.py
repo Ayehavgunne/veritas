@@ -45,9 +45,9 @@ def clean_value(value, type_desc, str_format=None):
 	if value:
 		value = str(value)
 		type_desc = str(type_desc).lower()
-		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'seconds':
+		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'bigint' or type_desc == 'seconds':
 			return int(value.replace(',', ''))
-		elif type_desc == 'float' or type_desc == 'money':
+		elif type_desc == 'float' or type_desc == 'money' or type_desc == 'numeric':
 			return float(value.replace(',', '').replace('$', ''))
 		elif type_desc == 'percent':
 			value = float(value.replace(',', '').replace('%', ''))
@@ -66,9 +66,9 @@ def clean_value(value, type_desc, str_format=None):
 def format_value(value, type_desc, str_format=None):
 	type_desc = str(type_desc).lower()
 	if value:
-		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'seconds':
+		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'bigint' or type_desc == 'seconds':
 			return locale.format('%d', value, grouping=True)
-		elif type_desc == 'float' or type_desc == 'decimal':
+		elif type_desc == 'float' or type_desc == 'decimal' or type_desc == 'numeric':
 			return locale.format('%f', value, grouping=True)
 		elif type_desc == 'percent':
 			value = value * 100

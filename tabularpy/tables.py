@@ -204,10 +204,10 @@ class BaseTable(metaclass=ABCMeta):
 			datatype = str(datatype).lower()
 			if 'interv' in datatype:
 				self.column_types[key] = 'interval'
-			elif 'int' in datatype or 'num' in datatype:
-				self.column_types[key] = 'integer'
 			elif 'dec' in datatype or 'flo' in datatype or 'numeric' in datatype:
 				self.column_types[key] = 'numeric'
+			elif 'int' in datatype or 'num' in datatype:
+				self.column_types[key] = 'integer'
 			elif 'varchar' in datatype or 'character var' in datatype or 'str' in datatype or 'text' in datatype:
 				self.column_types[key] = 'varchar'
 			elif 'datetimesec' in datatype or 'second' in datatype:
