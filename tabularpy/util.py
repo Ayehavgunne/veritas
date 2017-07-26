@@ -44,9 +44,7 @@ def sum_aggr(old, new, _):
 def clean_value(value, type_desc, str_format=None):
 	value = str(value)
 	type_desc = str(type_desc).lower()
-	if type_desc == 'string' or type_desc == 'varchar':
-		return value
-	elif type_desc == 'integer' or type_desc == 'seconds':
+	if type_desc == 'integer' or type_desc == 'int' or type_desc == 'seconds':
 		return int(value.replace(',', ''))
 	elif type_desc == 'float' or type_desc == 'money':
 		return float(value.replace(',', '').replace('$', ''))
@@ -61,11 +59,12 @@ def clean_value(value, type_desc, str_format=None):
 		return parse_date_time_string(value, str_format)
 	elif type_desc == 'timestamp':
 		return parse_time_delta(value)
+	return value
 
 
 def format_value(value, type_desc, str_format=None):
 	type_desc = str(type_desc).lower()
-	if type_desc == 'integer' or type_desc == 'seconds':
+	if type_desc == 'integer' or type_desc == 'int' or type_desc == 'seconds':
 		return locale.format('%d', value, grouping=True)
 	elif type_desc == 'float' or type_desc == 'decimal':
 		return locale.format('%f', value, grouping=True)
@@ -88,6 +87,15 @@ def format_value(value, type_desc, str_format=None):
 	elif type_desc == 'timestamp' or type_desc == 'time' or type_desc == 'interval':
 		return value.strftime(str_format)
 	return str(value)
+
+
+def cast(value):
+	if isinstance(value, float):
+		return 'float'
+	elif isinstance(value, Decimal):
+		return 'decimal'
+	elif isinstance(value, str):
+		return 'str'
 
 
 def get_sql_query_types(query):

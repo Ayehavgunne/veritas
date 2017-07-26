@@ -1,6 +1,6 @@
 import locale
 from . import Settings
-from .util import clean_value, format_value
+from .util import clean_value, format_value, cast
 from . import tables
 from . import row
 from . import col
@@ -9,13 +9,22 @@ locale.setlocale(locale.LC_ALL, '')
 
 
 class Cell(object):
-	__slots__ = ('_value', 'header', 'row_num', 'col_num', '_parent', '_settings', '_i')
+	__slots__ = ('_value', 'header', 'row_num', 'col_num', 'column_type', '_parent', '_settings', '_i')
 
-	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings()):
+	def __init__(self, value, header=None, row_num=None, col_num=None, parent=None, settings=Settings(), column_type=None):
 		self.header = header
 		self.row_num = row_num
 		self.col_num = col_num
 		self._parent = parent
+		if not column_type:
+			if isinstance(self._parent, row.Row):
+				self.column_type = self._parent.column_types[self.header]
+			elif isinstance(self._parent, col.Col):
+				self.column_type = self._parent.column_type
+			elif isinstance(self._parent, tables.BaseTable):
+				self.column_type = self._parent.column_types[self.header]
+		else:
+			self.column_type = column_type
 		self._settings = settings
 		self._value = clean_value(value, self.column_type)
 		self._i = 0
@@ -28,21 +37,18 @@ class Cell(object):
 	def value(self, new_val):
 		self._value = clean_value(new_val, self.column_type)
 
-	@property
-	def column_type(self):
-		if isinstance(self._parent, row.Row):
-			return self._parent.column_types[self.header]
-		elif isinstance(self._parent, col.Col):
-			return self._parent.column_type
-		elif isinstance(self._parent, tables.BaseTable):
-			return self._parent.column_types[self.header]
-
 	def replace(self, old, new):
 		if isinstance(self.value, str):
 			return self._new(self.value.replace(old, new))
 
-	def _new(self, value):
-		return Cell(value, self.header, self.row_num, self.col_num, self._parent, self._settings)
+	def _new(self, value, cell_type=None):
+		if not cell_type:
+			cell_type = cast(value)
+			if not cell_type:
+				cell_type = self.column_type
+			return Cell(value, self.header, self.row_num, self.col_num, self._parent, self._settings, cell_type)
+		else:
+			return Cell(value, self.header, self.row_num, self.col_num, self._parent, self._settings, cell_type)
 
 	def __setattr__(self, key, value):
 		if key == 'value':
@@ -233,6 +239,7 @@ class Cell(object):
 		return self
 
 	def __idiv__(self, other):
+		self.column_type = 'float'
 		if isinstance(other, Cell):
 			self.value /= other.value
 		else:
@@ -330,5 +337,19 @@ class Cell(object):
 		else:
 			return format_value(self._value, self.column_type, self._settings.datetime_format)
 
+	def getquoted(self):
+		return "'{}'".format(self.value)
+
 	def __hash__(self):
 		return hash(repr(self.value))
+
+try:
+	# noinspection PyUnresolvedReferences
+	from psycopg2.extensions import register_adapter
+
+	def adapt_cell(cell):
+		return cell
+
+	register_adapter(Cell, adapt_cell)
+except ImportError:
+	pass
