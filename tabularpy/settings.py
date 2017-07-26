@@ -2,7 +2,7 @@ class Settings(object):
 	def __init__(
 		self, ignore_none=False, datetime_format='%m/%d/%y %I:%M %p', date_format='%m/%d/%y',
 		time_format='%H:%M:%S', header_formatter=None, cell_formatter=None, sort_headers=False,
-		int_comma=True, dec_comma=True, float_comma=True, dont_format=(), empty_string_is_none=False
+		int_comma=True, dec_comma=True, float_comma=True, divide_percent=True, dont_format=(), empty_string_is_none=False
 	):
 		self.ignore_none = ignore_none
 		self.datetime_format = datetime_format
@@ -14,5 +14,6 @@ class Settings(object):
 		self.int_comma = int_comma
 		self.dec_comma = dec_comma
 		self.float_comma = float_comma
+		self.divide_percent = divide_percent
 		self.dont_format = list(dont_format)
 		self.empty_string_is_none = empty_string_is_none

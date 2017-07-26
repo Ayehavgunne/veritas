@@ -26,7 +26,7 @@ class Cell(object):
 		else:
 			self.column_type = column_type
 		self._settings = settings
-		self._value = clean_value(value, self.column_type)
+		self._value = clean_value(value, self.column_type, settings)
 		self._i = 0
 
 	@property

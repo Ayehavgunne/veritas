@@ -41,7 +41,7 @@ def sum_aggr(old, new, _):
 	return old + new
 
 
-def clean_value(value, type_desc, str_format=None):
+def clean_value(value, type_desc, settings=None):
 	if value:
 		value = str(value)
 		type_desc = str(type_desc).lower()
@@ -50,16 +50,22 @@ def clean_value(value, type_desc, str_format=None):
 		elif type_desc == 'float' or type_desc == 'money' or type_desc == 'numeric':
 			return float(value.replace(',', '').replace('$', ''))
 		elif type_desc == 'percent':
-			value = float(value.replace(',', '').replace('%', ''))
-			return value / 100
+			value = Decimal(value.replace(',', '').replace('%', ''))
+			if settings.divide_percent:
+				value = value / 100
+			return value
 		elif type_desc == 'decimal':
 			return Decimal(value)
 		elif type_desc == 'bool':
 			return bool(value)
-		elif type_desc == 'date' or type_desc == 'time' or type_desc == 'interval':
-			return parse_date_time_string(value, str_format)
+		elif type_desc == 'date':
+			return parse_date_time_string(value, settings.date_format)
+		elif type_desc == 'time':
+			return parse_date_time_string(value, settings.time_format)
+		elif type_desc == 'interval':
+			return parse_date_time_string(value)
 		elif type_desc == 'timestamp':
-			return parse_time_delta(value)
+			return parse_date_time_string(value, settings.datetime_format)
 	return value
 
 

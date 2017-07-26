@@ -256,10 +256,11 @@ class BaseTable(metaclass=ABCMeta):
 						col = self[cell.header]
 						for col_cell in col:
 							if col_cell.value is not None:
-								if '.' in col_cell and col_cell.replace('.', '').replace('-', '').isdecimal() and col_cell.count('.') == 1:
+								col_cell_val = str(col_cell.value)
+								if '.' in col_cell_val and col_cell_val.replace('.', '').replace('-', '').isdecimal() and col_cell_val.count('.') == 1:
 									type_string = 'numeric'
 									break
-								elif int(col_cell.replace(',', '')) < -2147483648 or int(col_cell.replace(',', '')) > 2147483647:
+								elif int(col_cell_val.replace(',', '')) < -2147483648 or int(col_cell_val.replace(',', '')) > 2147483647:
 									type_string = 'bigint'
 									break
 						self.column_types[cell.header] = type_string
