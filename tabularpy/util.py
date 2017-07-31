@@ -47,13 +47,15 @@ def clean_value(value, type_desc, settings=None):
 		type_desc = str(type_desc).lower()
 		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'bigint' or type_desc == 'seconds':
 			return int(value.replace(',', ''))
-		elif type_desc == 'float' or type_desc == 'money' or type_desc == 'numeric':
-			return float(value.replace(',', '').replace('$', ''))
+		elif type_desc == 'float' or type_desc == 'numeric':
+			return float(value.replace(',', ''))
 		elif type_desc == 'percent':
 			value = Decimal(value.replace(',', '').replace('%', ''))
 			if settings.divide_percent:
 				value = value / 100
 			return value
+		elif type_desc == 'money':
+			return Decimal(value.replace(',', '').replace('$', ''))
 		elif type_desc == 'decimal':
 			return Decimal(value)
 		elif type_desc == 'bool':
@@ -66,12 +68,15 @@ def clean_value(value, type_desc, settings=None):
 			return parse_date_time_string(value)
 		elif type_desc == 'timestamp':
 			return parse_date_time_string(value, settings.datetime_format)
+	elif value == '':
+		if settings.empty_string_is_none:
+			return None
 	return value
 
 
 def format_value(value, type_desc, str_format=None):
 	type_desc = str(type_desc).lower()
-	if value:
+	if value is not None:
 		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'bigint' or type_desc == 'seconds':
 			return locale.format('%d', value, grouping=True)
 		elif type_desc == 'float' or type_desc == 'decimal' or type_desc == 'numeric':
@@ -82,9 +87,10 @@ def format_value(value, type_desc, str_format=None):
 			return '{}%'.format(locale.format('%g', Decimal(s.rstrip('0').rstrip('.')), grouping=True) if '.' in s else locale.format('%g', Decimal(s), grouping=True))
 		elif type_desc == 'money':
 			if value < 0:
-				return '-{}'.format(locale.currency(abs(float(value)), grouping=True))
+				result = '-{}'.format(locale.currency(abs(value), grouping=True))
 			else:
-				return locale.currency(float(value), grouping=True)
+				result = locale.currency(value, grouping=True)
+			return result
 		elif type_desc == 'date':
 			if 'month' in type_desc:
 				return value.strftime('%m/%Y')
