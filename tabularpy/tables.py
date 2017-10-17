@@ -449,7 +449,7 @@ class BaseTable(metaclass=ABCMeta):
 	def replace_in_column(self, col, key):
 		if self._has_column(col):
 			for row in self:
-				self._table_data[col][row.row_num] = key(row[col].value)
+				self._table_data[col][row.row_num] = key(row[col]._value)
 
 	def pprint(self, num_rows=None):
 		col_lengths = [0 for _ in range(self.num_cols)]

@@ -45,9 +45,11 @@ def clean_value(value, type_desc, settings=None):
 	if value:
 		value = str(value)
 		type_desc = str(type_desc).lower()
+		if value == '-' and ('str' not in type_desc or 'varchar' not in type_desc):
+			return None
 		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'bigint' or type_desc == 'seconds':
 			return int(value.replace(',', ''))
-		elif type_desc == 'float' or type_desc == 'numeric':
+		elif type_desc == 'float':
 			return float(value.replace(',', ''))
 		elif type_desc == 'percent':
 			value = Decimal(value.replace(',', '').replace('%', ''))
@@ -56,7 +58,7 @@ def clean_value(value, type_desc, settings=None):
 			return value
 		elif type_desc == 'money':
 			return Decimal(value.replace(',', '').replace('$', ''))
-		elif type_desc == 'decimal':
+		elif type_desc == 'decimal' or type_desc == 'numeric':
 			return Decimal(value)
 		elif type_desc == 'bool':
 			return bool(value)
@@ -80,7 +82,7 @@ def format_value(value, type_desc, str_format=None):
 		if type_desc == 'integer' or type_desc == 'int' or type_desc == 'bigint' or type_desc == 'seconds':
 			return locale.format('%d', value, grouping=True)
 		elif type_desc == 'float' or type_desc == 'decimal' or type_desc == 'numeric':
-			return locale.format('%f', value, grouping=True)
+			return locale.format('%.4f', Decimal(str(value).replace(',', '')), grouping=True).rstrip('0').rstrip('.')
 		elif type_desc == 'percent':
 			value = value * 100
 			s = str(value)

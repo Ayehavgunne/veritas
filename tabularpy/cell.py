@@ -1,4 +1,5 @@
 import locale
+from decimal import InvalidOperation
 from . import Settings
 from .util import clean_value, format_value, cast
 from . import tables
@@ -26,7 +27,10 @@ class Cell(object):
 		else:
 			self.column_type = column_type
 		self._settings = settings
-		self._value = clean_value(value, self.column_type, settings)
+		try:
+			self._value = clean_value(value, self.column_type, settings)
+		except (TypeError, InvalidOperation):
+			self._value = value
 		self._i = 0
 
 	@property
@@ -338,10 +342,14 @@ class Cell(object):
 			return format_value(self._value, self.column_type, self._settings.datetime_format)
 
 	def getquoted(self):
-		return "'{}'".format(self.value)
+		if self.value is not None:
+			return "'{}'".format(self.value)
+		else:
+			return "Null".format(self.value)
 
 	def __hash__(self):
 		return hash(repr(self.value))
+
 
 try:
 	# noinspection PyUnresolvedReferences
