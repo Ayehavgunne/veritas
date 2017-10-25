@@ -671,14 +671,19 @@ class BaseTable(metaclass=ABCMeta):
 					if self.column_types:
 						for header in self.headers:
 							cell = row[header]
-							if 'int' in str(cell.column_type).lower() or 'float' in str(
-								cell.column_type).lower() or 'decimal' in str(cell.column_type).lower():
+							if cell.value is None:
+								jsonstring = '{}"{}":"null", '.format(jsonstring, str(header))
+							elif 'int' in str(cell.column_type).lower() or 'float' in str(cell.column_type).lower() or 'decimal' in str(cell.column_type).lower():
 								jsonstring = '{}"{}":{}, '.format(jsonstring, str(header), str(cell).replace(',', ''))
 							else:
 								jsonstring = '{}"{}":"{}", '.format(jsonstring, str(header), str(cell))
 					else:
 						for header in self.headers:
-							jsonstring = '{}"{}":"{}", '.format(jsonstring, str(header), str(row[header]))
+							cell = row[header]
+							if cell is None:
+								jsonstring = '{}"{}":"null", '.format(jsonstring, str(header))
+							else:
+								jsonstring = '{}"{}":"{}", '.format(jsonstring, str(header), str(cell))
 					jsonstring = '%s}, ' % jsonstring[:-2]
 				jsonstring = '{}]'.format(jsonstring[:-2])
 				return jsonstring
@@ -720,18 +725,18 @@ class BaseTable(metaclass=ABCMeta):
 			for _ in self.headers:
 				html = '{}<col>'.format(html)
 			html = '{}</colgroup>'.format(html)
-		if self.headers:
-			html = '{}<thead><tr>'.format(html)
-			html = '{}{}'.format(html, self.headers_to_html(header_formatter, add_attr))
-			if row_totals:
-				html = '{}<th>Total</th>'.format(html)
-			html = '{}</tr></thead>'.format(html)
 		if self.footers:
 			html = '{}<tfoot><tr>'.format(html)
 			html = '{}{}'.format(html, self.footers_to_html())
 			html = '{}</tr></tfoot>'.format(html)
 		elif footer:
 			html = '{}<tfoot></tfoot>'.format(html)
+		if self.headers:
+			html = '{}<thead><tr>'.format(html)
+			html = '{}{}'.format(html, self.headers_to_html(header_formatter, add_attr))
+			if row_totals:
+				html = '{}<th>Total</th>'.format(html)
+			html = '{}</tr></thead>'.format(html)
 		html = '{}<tbody>'.format(html)
 		grand_total = 0
 		for y, row in enumerate(self):
