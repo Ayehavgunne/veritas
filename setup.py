@@ -8,4 +8,5 @@ setup(
 	author_email='postanthony3000@gmail.com',
 	url='https://github.com/Ayehavgunne/tabularpy/',
 	packages=['tabularpy'],
+	extras_require={'Parsing Date/time strings': ['dateutil'], 'Parsing complex HTML': ['BeautifulSoup4']}
 )
