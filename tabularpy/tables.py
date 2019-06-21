@@ -7,7 +7,6 @@ from collections import Counter
 from csv import DictReader
 from datetime import timedelta
 from decimal import Decimal
-from os.path import isfile
 from . import Settings
 from .col import Col
 from .row import Row
@@ -41,7 +40,7 @@ class BaseTable(metaclass=ABCMeta):
 		self._i = 0
 
 	@abstractclassmethod
-	def _setup(self, obj):
+	def _setup(cls, obj):
 		pass
 
 	def _initialize(self):
@@ -352,9 +351,14 @@ class BaseTable(metaclass=ABCMeta):
 			if lists:
 				return ListOfListsTable(lists, self.headers, self.footers, self.column_types, self.name,
 					self._settings)
-		return EmptyTable(self.headers, self.footers, self.column_types, self.name, self._settings)
+		return Table(self.headers, self.footers, self.column_types, self.name, self._settings)
 
 	def remove_duplicates(self, *columns):
+		dup_rows = self.find_duplicates(*columns)
+		for row in reversed(dup_rows):
+			del self[row]
+
+	def find_duplicates(self, *columns):
 		if self:
 			if not columns:
 				columns = self.headers
@@ -367,14 +371,12 @@ class BaseTable(metaclass=ABCMeta):
 			column_rows = transpose(column_rows)
 			column_rows = [' '.join([str(item) for item in row]) for row in column_rows]
 			results = find_duplicates(column_rows)
-			del_rows = set()
+			dup_rows = set()
 			for key in results:
 				results[key].pop(0)
 				for row in results[key]:
-					del_rows.add(row)
-			del_rows = sorted(del_rows)
-			for row in reversed(del_rows):
-				del self[row]
+					dup_rows.add(row)
+			return sorted(dup_rows)
 
 	def pop_row(self, where):
 		"""The 'where' argument can be a number which represents a row or it
@@ -423,7 +425,7 @@ class BaseTable(metaclass=ABCMeta):
 			condition = lambda x, y: x != y
 		else:
 			raise SyntaxError
-		filtered_table = EmptyTable(self.headers, self.footers, self.column_types, self.name, self._settings)
+		filtered_table = Table(self.headers, self.footers, self.column_types, self.name, self._settings)
 		for row in self:
 			if condition(row[column], what):
 				filtered_table.add_row(row)
@@ -929,7 +931,7 @@ class BaseTable(metaclass=ABCMeta):
 				elif not self and other:
 					return other.copy()
 				elif not self and not other:
-					return EmptyTable(self.headers, self.footers, self.column_types, self.name, self._settings)
+					return Table(self.headers, self.footers, self.column_types, self.name, self._settings)
 				else:
 					return self.copy()
 			else:
@@ -981,21 +983,21 @@ class BaseTable(metaclass=ABCMeta):
 
 
 class CsvTable(BaseTable):
-	def __init__(self, file_path, headers=None, footers=None, column_types=None, name=None, settings=Settings()):
+	def __init__(self, file_path, delimiter=',', headers=None, footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(headers, footers, column_types, name, settings)
-		# try:
-		if isfile(file_path):
+		self.delimiter = delimiter
+		try:
 			with open(file_path) as open_file:
 				self._setup(open_file)
-		else:
-			raise ValueError
+		except (TypeError, OSError):
+			self._setup(file_path.split('\n'))
 
 	def _setup(self, obj):
 		if self.headers:
-			temp = DictReader(obj, fieldnames=self.headers)
+			temp = DictReader(obj, delimiter=self.delimiter, fieldnames=self.headers)
 			self._read_file(temp)
 		else:
-			temp = DictReader(obj)
+			temp = DictReader(obj, delimiter=self.delimiter)
 			self._read_file(temp)
 
 	def _read_file(self, obj):
@@ -1180,7 +1182,7 @@ class ListOfDictsTable(BaseTable):
 			self._initialize()
 
 
-class EmptyTable(BaseTable):
+class Table(BaseTable):
 	def __init__(self, headers=None, footers=None, column_types=None, name=None, settings=Settings()):
 		super().__init__(headers, footers, column_types, name, settings)
 		self._setup(None)

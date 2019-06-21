@@ -13,4 +13,4 @@ from .tables import SqlAlcTable
 from .tables import HtmlTable
 from .tables import ListOfDictsTable
 from .tables import ListOfListsTable
-from .tables import EmptyTable
+from .tables import Table
