@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name="veritas",
-    version="1.0.1",
+    version="1.0.2",
     description="Python tablular information manupulation library",
     author="Anthony Post",
     author_email="postanthony3000@gmail.com",

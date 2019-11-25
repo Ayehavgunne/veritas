@@ -39,7 +39,7 @@ def sum_aggr(old, new, _):
     return old + new
 
 
-def clean_value(value, type_desc, settings=None):
+def clean_value(value, type_desc, settings):
     if value:
         value = str(value)
         type_desc = str(type_desc).lower()

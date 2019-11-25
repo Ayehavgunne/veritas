@@ -16,14 +16,14 @@ class Col(object):
     )
 
     def __init__(
-        self, cells, column_type, header, col_num, parent, settings=Settings()
+        self, cells, column_type, header, col_num, parent, settings=None
     ):
         self.cells = cells
         self.column_type = column_type
         self.header = header
         self.col_num = col_num
         self._parent = parent
-        self._settings = settings
+        self._settings = settings or Settings()
         self._i = 0
 
     def index(self, item):

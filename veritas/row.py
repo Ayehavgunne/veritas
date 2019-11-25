@@ -17,14 +17,14 @@ class Row(object):
     )
 
     def __init__(
-        self, cells, headers, column_types, row_num, parent, settings=Settings()
+        self, cells, headers, column_types, row_num, parent, settings=None
     ):
         self.cells = cells
         self.headers = headers
         self.column_types = column_types
         self.row_num = row_num
         self._parent = parent
-        self._settings = settings
+        self._settings = settings or Settings()
         self._i = 0
 
     def index(self, item):

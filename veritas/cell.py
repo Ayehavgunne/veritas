@@ -26,7 +26,7 @@ class Cell(object):
         row_num=None,
         col_num=None,
         parent=None,
-        settings=Settings(),
+        settings=None,
         column_type=None,
     ):
         self.header = header
@@ -42,7 +42,7 @@ class Cell(object):
                 self.column_type = self._parent.column_types[self.header]
         else:
             self.column_type = column_type
-        self._settings = settings
+        self._settings = settings or Settings()
         try:
             self._value = clean_value(value, self.column_type, settings)
         except (TypeError, InvalidOperation):
@@ -55,7 +55,7 @@ class Cell(object):
 
     @value.setter
     def value(self, new_val):
-        self._value = clean_value(new_val, self.column_type)
+        self._value = clean_value(new_val, self.column_type, self._settings)
 
     def replace(self, old, new):
         if isinstance(self.value, str):

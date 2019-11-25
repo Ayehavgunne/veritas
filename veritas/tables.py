@@ -46,7 +46,7 @@ class BaseTable(metaclass=ABCMeta):
         footers=None,
         column_types=None,
         name=None,
-        settings=Settings(),
+        settings=None,
     ):
         self.headers = headers or []
         self.footers = footers or []
@@ -61,7 +61,7 @@ class BaseTable(metaclass=ABCMeta):
             "footers": [],
             "column_types": {},
         }
-        self._settings = settings
+        self._settings = settings or Settings()
         self._i = 0
 
     @classmethod
@@ -638,7 +638,7 @@ class BaseTable(metaclass=ABCMeta):
             for value in values:
                 vs.append(
                     [
-                        clean_value(val, self.column_types[value])
+                        clean_value(val, self.column_types[value], self._settings)
                         for val in self._table_data[value]
                     ]
                 )
