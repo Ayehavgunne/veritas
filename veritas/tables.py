@@ -113,8 +113,8 @@ class BaseTable(metaclass=ABCMeta):
             total = 0
             for cell in row:
                 if cell.is_numeric():
-                    total += cell
-            totals.append(total.value)
+                    total += cell.value
+            totals.append(total)
         return totals
 
     def keys(self):
@@ -126,7 +126,7 @@ class BaseTable(metaclass=ABCMeta):
 
     def add_column(self, column, name, col_type=None, prepend=False):
         if self._has_column(name):
-            raise ValueError("{} already exists in table".format(name))
+            raise ValueError(f"{name} already exists in table")
         elif len(column) == self.num_rows:
             self._table_data[name] = column
             if prepend:
@@ -148,7 +148,7 @@ class BaseTable(metaclass=ABCMeta):
             row_headers = row.keys()
             for row_header in row_headers:
                 if row_header not in self.headers:
-                    raise ValueError("{} contains columns not in table".format(row))
+                    raise ValueError(f"{row} contains columns not in table")
             for header in self.headers:
                 if not prepend:
                     try:
@@ -169,7 +169,7 @@ class BaseTable(metaclass=ABCMeta):
             else:
                 raise AttributeError("Columns do not match")
         else:
-            raise ValueError("{} is not of type dict".format(row))
+            raise ValueError(f"{row} is not of type dict")
 
     def set_type(self, column, type_):
         self.column_types[column] = type_
@@ -376,9 +376,9 @@ class BaseTable(metaclass=ABCMeta):
                         self._table_data[y][x], y, x, self.headers.index(y), self
                     )
                 else:
-                    raise AttributeError("{} does not have row {}".format(self, x))
+                    raise AttributeError(f"{self} does not have row {x}")
             else:
-                raise AttributeError("{} does not have column {}".format(self, y))
+                raise AttributeError(f"{self} does not have column {y}")
         elif isinstance(y, int) and isinstance(x, int):
             header = self.headers[y]
             return Cell(self._table_data[header][x], header, x, y, self._get_row(x))
@@ -389,15 +389,15 @@ class BaseTable(metaclass=ABCMeta):
                 if self._has_row(x):
                     self._table_data[y][x] = value
                 else:
-                    raise AttributeError("{} does not have row {}".format(self, x))
+                    raise AttributeError(f"{self} does not have row {x}")
             else:
-                raise AttributeError("{} does not have column {}".format(self, y))
+                raise AttributeError(f"{self} does not have column {y}")
         elif isinstance(y, int) and isinstance(x, int):
             header = self.headers[y]
             if self._has_row(x):
                 self._table_data[header][x] = value
             else:
-                raise AttributeError("{} does not have row {}".format(self, x))
+                raise AttributeError(f"{self} does not have row {x}")
 
     def count_val(self, value, column=None):
         val_count = 0
@@ -460,10 +460,10 @@ class BaseTable(metaclass=ABCMeta):
 
     def pop_row(self, where):
         """The 'where' argument can be a number which represents a row or it
-		can be a dictionary with keys representing columns and the values
-		representing the table values for the matching keys. The first row
-		with matching values in the specified columns will be removed from
-		the table and returned from the function"""
+        can be a dictionary with keys representing columns and the values
+        representing the table values for the matching keys. The first row
+        with matching values in the specified columns will be removed from
+        the table and returned from the function"""
         if isinstance(where, int):
             if self._has_row(where):
                 row = self[where]
@@ -519,8 +519,8 @@ class BaseTable(metaclass=ABCMeta):
                 filtered_table.add_row(row)
         return filtered_table
 
-    def by_columns(self):
-        return (self._get_column(header) for header in self.headers)
+    def columns(self):
+        return [self._get_column(header) for header in self.headers]
 
     def field_definitions(self):
         output = []
@@ -558,21 +558,15 @@ class BaseTable(metaclass=ABCMeta):
                     col_lengths[x] = len(str(cell))
             if num_rows and i >= num_rows:
                 break
-        table_string = "{0:>{width}}".format("row", width=row_num_length)
+        table_string = f"{'row':>{row_num_length}}"
         for x, header in enumerate(self.headers):
-            table_string = "{0}\t{1:>{width}}".format(
-                table_string, header, width=col_lengths[x]
-            )
-        table_string = "{}\r\n".format(table_string)
+            table_string = f"{table_string}\t{header:>{col_lengths[x]}}"
+        table_string = f"{table_string}\r\n"
         for i, row in enumerate(self, 1):
-            table_string = "{0}{1:>{width}}".format(
-                table_string, i, width=row_num_length
-            )
+            table_string = f"{table_string}{i:>{row_num_length}}"
             for x, cell in enumerate(row):
-                table_string = "{0}\t{1:>{width}}".format(
-                    table_string, str(cell), width=col_lengths[x]
-                )
-            table_string = "{}\r\n".format(table_string)
+                table_string = f"{table_string}\t{str(cell):>{col_lengths[x]}}"
+            table_string = f"{table_string}\r\n"
             if num_rows and i >= num_rows:
                 break
         return table_string
@@ -640,9 +634,7 @@ class BaseTable(metaclass=ABCMeta):
             if columns:
                 c = self._table_data[columns]
                 distinct_col = list(set(c))
-            vs = (
-                []
-            )  # [[int(str(val).replace(',', ''))] for value in values for val in self._table_data[value]]
+            vs = []
             for value in values:
                 vs.append(
                     [
@@ -675,7 +667,8 @@ class BaseTable(metaclass=ABCMeta):
                         if intersection:
                             list_of_lists[y].append(0)
                             for n, i in enumerate(intersection):
-                                # must fix to go through all the values and aggregate functions insead of just the first ones
+                                # must fix to go through all the values and aggregate
+                                # functions insead of just the first ones
                                 list_of_lists[y][x + 1] = aggr_funcs(
                                     list_of_lists[y][x + 1], vs[0][i], n + 1
                                 )
@@ -698,9 +691,8 @@ class BaseTable(metaclass=ABCMeta):
                 column_types = {value: self.column_types[value] for value in values}
                 column_types[rows] = self.column_types[rows]
 
-            elif (
-                col_indexes
-            ):  # Haven't tried this one yet, probably doesn't work as expected!
+            # Haven't tried this one yet, probably doesn't work as expected!
+            elif col_indexes:
                 for y, (col_val, n) in enumerate(col_indexes.items()):
                     list_of_lists.append([col_val])
                     for x, v in enumerate(vs):
@@ -714,7 +706,8 @@ class BaseTable(metaclass=ABCMeta):
                     columns: self.column_types[columns],
                     values: self.column_types[values],
                 }
-                # Should have too transpose the headers (distinct_col) and column_types as well
+                # Should have to transpose the headers (distinct_col)
+                # and column_types as well
                 transpose(list_of_lists)
 
             return ListOfListsTable(
@@ -736,7 +729,8 @@ class BaseTable(metaclass=ABCMeta):
         except ImportError:
             print(
                 "openpyxl is required in order to create an Excel file. Alternativly",
-                "one could create a csv file using .to_csv(), which is compatible with Excel.",
+                "one could create a csv file using .to_csv(), which is compatible with "
+                "Excel.",
             )
             raise
         wb = openpyxl.Workbook()
@@ -772,42 +766,45 @@ class BaseTable(metaclass=ABCMeta):
         return wb
 
     def to_csv(self, header=True, footer=False, handle_none=False):
-        header_string = ""
+        csv_pieces = []
         if self.headers and header:
             for head in self.headers:
                 head = str(head)
                 if "," in head:
-                    header_string = '{}"{}",'.format(header_string, head)
+                    csv_pieces.append(f'"{head}",')
                 else:
-                    header_string = "{}{},".format(header_string, head)
-            header_string = "{}\n".format(header_string[:-1])
-        csv_string = "{}".format(header_string)
+                    csv_pieces.append(f"{head},")
+            csv_pieces = "".join(csv_pieces)
+            csv_pieces = [f"{csv_pieces[:-1]}\n"]
         for row in self:
             for cell in row:
                 if handle_none and cell.value is None:
                     cell = ""
                 cell = str(cell)
                 if "," in cell:
-                    csv_string = '{}"{}",'.format(csv_string, cell)
+                    csv_pieces.append(f'"{cell}",')
                 else:
-                    csv_string = "{}{},".format(csv_string, cell)
-            csv_string = "{}\n".format(csv_string[:-1])
+                    csv_pieces.append(f"{cell},")
+            csv_pieces = "".join(csv_pieces)
+            csv_pieces = [f"{csv_pieces[:-1]}\n"]
         if self.footers and footer:
             for footer in self.footers:
                 footer = str(footer)
                 if "," in footer:
-                    csv_string = '{}"{}",'.format(csv_string, footer)
+                    csv_pieces.append(f'"{footer}",')
                 else:
-                    csv_string = "{}{},".format(csv_string, footer)
-            csv_string = "{}\n".format(csv_string[:-1])
-        return csv_string
+                    csv_pieces.append(f"{footer},")
+            csv_pieces = "".join(csv_pieces)
+            csv_pieces = [f"{csv_pieces[:-1]}\n"]
+        return "".join(csv_pieces)
 
     def to_json_string(self, json_type="array_of_objects"):
+        json_pieces = []
         if json_type == "array_of_objects":
             if self.headers:
-                jsonstring = "["
+                json_pieces.append("[")
                 for row in self:
-                    jsonstring = "%s{" % jsonstring
+                    json_pieces.append("{")
                     if self.column_types:
                         for header in self.headers:
                             cell = row[header]
@@ -816,30 +813,30 @@ class BaseTable(metaclass=ABCMeta):
                                 or "float" in str(cell.column_type).lower()
                                 or "decimal" in str(cell.column_type).lower()
                             ):
-                                jsonstring = '{}"{}":{}, '.format(
-                                    jsonstring, str(header), str(cell).replace(",", "")
+                                json_pieces.append(
+                                    f'"{str(header)}":{str(cell).replace(",", "")}, '
                                 )
                             else:
-                                jsonstring = '{}"{}":"{}", '.format(
-                                    jsonstring, str(header), str(cell)
-                                )
+                                json_pieces.append(f'"{str(header)}":"{str(cell)}", ')
                     else:
                         for header in self.headers:
-                            jsonstring = '{}"{}":"{}", '.format(
-                                jsonstring, str(header), str(row[header])
+                            json_pieces.append(
+                                f'"{str(header)}":"{str(row[header])}", '
                             )
-                    jsonstring = "%s}, " % jsonstring[:-2]
-                jsonstring = "{}]".format(jsonstring[:-2])
-                return jsonstring
+                    json_pieces = "".join(json_pieces)
+                    json_pieces = [f"{json_pieces[:-2]}}}, "]
+                json_pieces = "".join(json_pieces)
+                json_pieces = [f"{json_pieces[:-2]}]"]
         elif json_type == "array_of_arrays":
-            jsonstring = "["
+            json_pieces.append("[")
             if self.headers:
-                jsonstring = "{}[".format(jsonstring)
+                json_pieces.append("[")
                 for header in self.headers:
-                    jsonstring = '{}"{}", '.format(jsonstring, str(header))
-                jsonstring = "{}], ".format(jsonstring[:-2])
+                    json_pieces.append(f'"{str(header)}", ')
+                json_pieces = "".join(json_pieces)
+                json_pieces = [f"{json_pieces[:-2]}], "]
             for row in self:
-                jsonstring = "{}[".format(jsonstring)
+                json_pieces.append("[")
                 if self.column_types:
                     for cell in row:
                         if (
@@ -847,17 +844,17 @@ class BaseTable(metaclass=ABCMeta):
                             or "float" in str(cell.column_type).lower()
                             or "decimal" in str(cell.column_type).lower()
                         ):
-                            jsonstring = "{}{}, ".format(
-                                jsonstring, str(cell).replace(",", "")
-                            )
+                            json_pieces.append('{str(cell).replace(",", "")}, ')
                         else:
-                            jsonstring = '{}"{}", '.format(jsonstring, str(cell))
+                            json_pieces.append(f'"{str(cell)}", ')
                 else:
                     for cell in row:
-                        jsonstring = '{}"{}", '.format(jsonstring, str(cell))
-                jsonstring = "{}], ".format(jsonstring[:-2])
-            jsonstring = "{}]".format(jsonstring[:-2])
-            return jsonstring
+                        json_pieces.append(f'"{str(cell)}", ')
+                json_pieces = "".join(json_pieces)
+                json_pieces = [f"{json_pieces[:-2]}}}, "]
+            json_pieces = "".join(json_pieces)
+            json_pieces = [f"{json_pieces[:-2]}]"]
+        return "".join(json_pieces)
 
     def to_html_table(
         self,
@@ -871,83 +868,79 @@ class BaseTable(metaclass=ABCMeta):
         col_totals=False,
         col_group=False,
     ):
-        html = ""
+        html_pieces = []
         if full_html:
-            html = "<html><body>"
+            html_pieces.append("<html><body>")
         if not inner_table:
             if table_attr:
-                html = "{}<table {}>".format(html, table_attr)
+                html_pieces.append(f"<table {table_attr}>")
             else:
-                html = "{}<table>".format(html)
+                html_pieces.append("<table>")
         if col_group:
-            html = "{}<colgroup>".format(html)
+            html_pieces.append("<colgroup>")
             for _ in self.headers:
-                html = "{}<col>".format(html)
-            html = "{}</colgroup>".format(html)
+                html_pieces.append("<col>")
+            html_pieces.append("</colgroup>")
         if self.headers:
-            html = "{}<thead><tr>".format(html)
-            html = "{}{}".format(html, self.headers_to_html(header_formatter, add_attr))
+            html_pieces.append("<thead><tr>")
+            html_pieces.append(f"{self.headers_to_html(header_formatter, add_attr)}")
             if row_totals:
-                html = "{}<th>Total</th>".format(html)
-            html = "{}</tr></thead>".format(html)
+                html_pieces.append("<th>Total</th>")
+            html_pieces.append("</tr></thead>")
         if self.footers:
-            html = "{}<tfoot><tr>".format(html)
-            html = "{}{}".format(html, self.footers_to_html())
-            html = "{}</tr></tfoot>".format(html)
+            html_pieces.append("<tfoot><tr>")
+            html_pieces.append(f"{self.footers_to_html()}")
+            html_pieces.append("</tr></tfoot>")
         elif footer:
-            html = "{}<tfoot></tfoot>".format(html)
-        html = "{}<tbody>".format(html)
+            html_pieces.append("<tfoot></tfoot>")
+        html_pieces.append("<tbody>")
         grand_total = 0
         for y, row in enumerate(self):
-            html = "{}<tr>{}</tr>".format(html, row.to_html(add_attr, row_totals))
+            html_pieces.append(f"<tr>{row.to_html(add_attr, row_totals)}</tr>")
             if row_totals:
                 grand_total += row.sum()
         if col_totals:
             grand_total = 0
-            html = "{}<tr>".format(html)
-            for col in self.by_columns():
+            html_pieces.append("<tr>")
+            for col in self.columns():
                 total = col.sum()
-                html = '{}<td class="coltotal">{:,}</td>'.format(html, total)
+                html_pieces.append(f'<td class="coltotal">{total:,}</td>')
                 grand_total += total
             if row_totals:
-                html = '{}<td class="grandtotal">{:,}</td>'.format(html, grand_total)
-            html = "{}</tr>".format(html)
-        html = "{}</tbody>".format(html)
+                html_pieces.append(f'<td class="grandtotal">{grand_total:,}</td>')
+            html_pieces.append("</tr>")
+        html_pieces.append("</tbody>")
         if not inner_table:
-            html = "{}</table>".format(html)
+            html_pieces.append("</table>")
         if full_html:
-            html = "{}</body></html>".format(html)
-        return html
+            html_pieces.append("</body></html>")
+        return "".join(html_pieces)
 
     def headers_to_html(self, header_formatter=None, add_attr=None):
         if header_formatter:
             if add_attr:
                 html = "".join(
-                    "<th {}>{}</th>".format(
-                        add_attr(header, self.column_types[header], header),
-                        header_formatter(header),
-                    )
+                    f"<th {add_attr(header, self.column_types[header], header)}>"
+                    f"{header_formatter(header)}</th>"
                     for header in self.headers
                 )
             else:
                 html = "".join(
-                    "<th>{}</th>".format(header_formatter(header))
-                    for header in self.headers
+                    f"<th>{header_formatter(header)}</th>" for header in self.headers
                 )
         else:
             if add_attr:
                 html = "".join(
-                    "<th {}>{}</th>".format(
-                        add_attr(header, self.column_types[header], header), header
-                    )
+                    f"<th {add_attr(header, self.column_types[header], header)}>"
+                    f"{header}</th>"
                     for header in self.headers
                 )
             else:
-                html = "".join("<th>{}</th>".format(header) for header in self.headers)
+                html = "".join(f"<th>{header}</th>" for header in self.headers)
         return html
 
     def footers_to_html(self):
-        return "".join(["<th>{}</th>".format(footer) for footer in self.footers])
+        return "".join([f"<th>{footer}</th>" for footer in self.footers])
 
     def sort(self, header, key=None, reverse=False):
         if self._has_column(header):
@@ -979,7 +972,7 @@ class BaseTable(metaclass=ABCMeta):
                 self._settings,
             )
         else:
-            raise AttributeError("{} does not have column {}".format(self, header))
+            raise AttributeError(f"{self} does not have column {header}")
 
     def _has_row(self, row_num):
         if row_num < self.num_rows:
@@ -1054,17 +1047,16 @@ class BaseTable(metaclass=ABCMeta):
                     self._table_data[key] = [None for _ in range(self.num_rows)]
                 else:
                     raise ValueError(
-                        "number of items in provided list, {}, does not match objects rows, {}".format(
-                            len(value), self.num_rows
-                        )
+                        f"number of items in provided list, {len(value)}, "
+                        f"does not match objects rows, {self.num_rows}"
                     )
                 self.num_cols += 1
                 if key not in self.headers:
                     self.headers.append(key)
             else:
-                raise ValueError("{} is not of type list".format(type(value)))
+                raise ValueError(f"{type(value)} is not of type list")
         else:
-            raise ValueError("{} is not of type string".format(type(key)))
+            raise ValueError(f"{type(key)} is not of type string")
 
     def __delitem__(self, item):
         if isinstance(item, str):
@@ -1082,7 +1074,7 @@ class BaseTable(metaclass=ABCMeta):
                     del self._table_data[col][item]
                 self.num_rows -= 1
             else:
-                raise IndexError("{} is out of range".format(item))
+                raise IndexError(f"{item} is out of range")
 
     def __contains__(self, item):
         if isinstance(item, str):
@@ -1118,12 +1110,12 @@ class BaseTable(metaclass=ABCMeta):
 
     def __repr__(self):
         if self.name:
-            return "<Table(name={})>".format(self.name)
+            return f"<Table(name={self.name})>"
         else:
             return "<Table()>"
 
     def __str__(self):
-        return "\n".join("{}".format(row) for row in self)
+        return "\n".join(str(row) for row in self)
 
     def __bool__(self):
         if self.num_cols and self.num_rows:
@@ -1164,7 +1156,7 @@ class BaseTable(metaclass=ABCMeta):
             return self.copy()
         else:
             raise TypeError(
-                "unsupported operand type(s) for +: 'Table' and {}".format(type(other))
+                f"unsupported operand type(s) for +: 'Table' and {type(other)}"
             )
 
     def __sub__(self, other):
@@ -1188,7 +1180,7 @@ class BaseTable(metaclass=ABCMeta):
                 )
         else:
             raise TypeError(
-                "unsupported operand type(s) for -: 'Table' and {}".format(type(other))
+                f"unsupported operand type(s) for -: 'Table' and {type(other)}"
             )
 
     def __eq__(self, other):
@@ -1304,11 +1296,11 @@ class ExcelTable(BaseTable):
         else:
             ws = wb[wb.get_sheet_names()[0]]
         if not self.headers:
-            for cell in list(ws["A1:{}1".format(get_column_letter(ws.max_column))])[0]:
+            for cell in list(ws[f"A1:{get_column_letter(ws.max_column)}1"])[0]:
                 self._table_data["headers"].append(cell.value)
         if not self.column_types:
             self._guess_excel_types(
-                list(ws["A2:{}2".format(get_column_letter(ws.max_column))])[0]
+                list(ws[f"A2:{get_column_letter(ws.max_column)}2"])[0]
             )
         for col, header in zip(ws.columns, self._table_data["headers"]):
             first = True
