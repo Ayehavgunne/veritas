@@ -88,10 +88,10 @@ def format_value(value, type_desc, str_format=None):
             or type_desc == "bigint"
             or type_desc == "seconds"
         ):
-            return locale.format("%d", value, grouping=True)
+            return locale.format_string("%d", value, grouping=True)
         elif type_desc == "float" or type_desc == "decimal" or type_desc == "numeric":
             return (
-                locale.format(
+                locale.format_string(
                     "%.4f", Decimal(str(value).replace(",", "")), grouping=True
                 )
                 .rstrip("0")
@@ -100,14 +100,17 @@ def format_value(value, type_desc, str_format=None):
         elif type_desc == "percent":
             value = value * 100
             s = str(value)
-            return "{}%".format(
-                locale.format("%g", Decimal(s.rstrip("0").rstrip(".")), grouping=True)
+            v = (
+                locale.format_string(
+                    "%g", Decimal(s.rstrip("0").rstrip(".")), grouping=True
+                )
                 if "." in s
-                else locale.format("%g", Decimal(s), grouping=True)
+                else locale.format_string("%g", Decimal(s), grouping=True)
             )
+            return f"{v}%"
         elif type_desc == "money":
             if value < 0:
-                result = "-{}".format(locale.currency(abs(value), grouping=True))
+                result = f"-{locale.currency(abs(value), grouping=True)}"
             else:
                 result = locale.currency(value, grouping=True)
             return result
@@ -251,7 +254,7 @@ def parse_time_delta(s):
         if "seconds" in d:
             seconds += int(d["seconds"])
         if "deciseconds" in d:
-            seconds += float(".{}".format(d["deciseconds"]))
+            seconds += float(f".{d['deciseconds']}")
         return timedelta(seconds=seconds)
     return s
 
@@ -350,7 +353,7 @@ class HtmlParser(HTMLParser):
         self.handle_entityref("#" + ref)
 
     def handle_entityref(self, ref):
-        self.handle_data(html.unescape("&{};".format(ref)))
+        self.handle_data(html.unescape(f"&{ref};"))
 
     def error(self, message):
         print(message)

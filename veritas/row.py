@@ -89,24 +89,16 @@ class Row(object):
         if add_attr:
             html = "".join(
                 [
-                    "<td {}>{}</td>".format(
-                        add_attr(
-                            cell,
-                            self.column_types[self.headers[x]],
-                            self.headers[x],
-                            self,
-                        ),
-                        self.get_cell(x),
-                    )
+                    f"<td {add_attr(cell, self.column_types[self.headers[x]], self.headers[x], self)}>{self.get_cell(x)}</td>"
                     for x, cell in enumerate(self.cells)
                 ]
             )
         else:
             html = "".join(
-                ["<td>{}</td>".format(self.get_cell(x)) for x in range(len(self.cells))]
+                [f"<td>{self.get_cell(x)}</td>" for x in range(len(self.cells))]
             )
         if row_total:
-            html = '{}<td class="rowtotal">{:,}</td>'.format(html, self.sum())
+            html = f'{html}<td class="rowtotal">{self.sum():,}</td>'
         return html
 
     def __iter__(self):
@@ -125,7 +117,7 @@ class Row(object):
         if item in self.headers:
             idx = self.headers.index(item)
             return self.get_cell(idx)
-        raise AttributeError("attribute {} does not exist".format(item))
+        raise AttributeError(f"attribute {item} does not exist")
 
     def __getitem__(self, item):
         if isinstance(item, str):
@@ -135,8 +127,8 @@ class Row(object):
         elif isinstance(item, int):
             return self.get_cell(item)
         else:
-            raise TypeError("Cannot access items with type {}".format(type(item), item))
-        raise ValueError("Row does not have item {}".format(item))
+            raise TypeError(f"Cannot access items with type {type(item)}")
+        raise ValueError(f"Row does not have item {item}")
 
     def __setitem__(self, key, value):
         if isinstance(key, c.Cell):
@@ -149,7 +141,7 @@ class Row(object):
                 if self._parent:
                     self._parent.change_cell(key, self.row_num, value)
             else:
-                raise KeyError("'{}'".format(key))
+                raise KeyError(f"'{key}'")
         elif isinstance(key, int):
             if key < len(self.cells):
                 self.cells[key] = value
@@ -158,9 +150,7 @@ class Row(object):
             else:
                 raise IndexError("assignment index out of range")
         else:
-            raise TypeError(
-                "indices must be integers or strings, not {}".format(type(key))
-            )
+            raise TypeError(f"indices must be integers or strings, not {type(key)}")
 
     def __delitem__(self, item):
         if isinstance(item, str):
@@ -197,4 +187,4 @@ class Row(object):
         return str(self.cells)
 
     def __repr__(self):
-        return "<{} Cells: {}>".format(type(self).__name__, self.cells)
+        return f"<{type(self).__name__} Cells: {self.cells}>"

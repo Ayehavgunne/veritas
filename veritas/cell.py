@@ -367,8 +367,12 @@ class Cell(object):
         return len(self.value)
 
     def __repr__(self):
-        return "{}({}, {}, {}, {})".format(
-            self.__class__.__name__, self.value, self.header, self.row_num, self.col_num
+        return (
+            f"{self.__class__.__name__}("
+            f"{self.value}, "
+            f"{self.header}, "
+            f"{self.row_num}, "
+            f"{self.col_num})"
         )
 
     def __str__(self):
@@ -381,9 +385,9 @@ class Cell(object):
 
     def getquoted(self):
         if self.value is not None:
-            return "'{}'".format(self.value)
+            return f"'{self.value}'"
         else:
-            return "Null".format(self.value)
+            return "Null"
 
     def __hash__(self):
         return hash(repr(self.value))

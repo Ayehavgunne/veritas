@@ -68,16 +68,15 @@ class Col(object):
         if add_attr:
             html = "".join(
                 [
-                    "<td {}>{}</td>".format(
-                        add_attr(cell, self.column_type, x, self), self.get_cell(x)
-                    )
+                    f"<td {add_attr(cell, self.column_type, x, self)}>"
+                    f"{self.get_cell(x)}</td>"
                     for x, cell in enumerate(self.cells)
                 ]
             )
         else:
-            html = "".join(["<td>{}</td>".format(cell) for cell in self.cells])
+            html = "".join([f"<td>{cell}</td>" for cell in self.cells])
         if row_total:
-            html = '{}<td class="rowtotal">{:,}</td>'.format(html, self.sum())
+            html = f'{html}<td class="rowtotal">{self.sum():,}</td>'
         return html
 
     def __next__(self):
@@ -105,7 +104,7 @@ class Col(object):
             else:
                 raise IndexError("assignment index out of range")
         else:
-            raise TypeError("indices must be integers, not {}".format(type(key)))
+            raise TypeError(f"indices must be integers, not {type(key)}")
 
     def __delitem__(self, item):
         del self.cells[item]
@@ -128,4 +127,4 @@ class Col(object):
         return str(self.cells)
 
     def __repr__(self):
-        return "<{} Cells: {}>".format(type(self).__name__, self.cells)
+        return f"<{type(self).__name__} Cells: {self.cells}>"
