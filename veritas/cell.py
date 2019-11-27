@@ -10,6 +10,7 @@ locale.setlocale(locale.LC_ALL, "")
 class Cell(object):
     __slots__ = (
         "_value",
+        "_raw_value",
         "header",
         "row_num",
         "col_num",
@@ -45,6 +46,7 @@ class Cell(object):
         self._settings = settings or Settings()
         try:
             self._value = clean_value(value, self.column_type, settings)
+            self._raw_value = value
         except (TypeError, InvalidOperation):
             self._value = value
         self._i = 0
@@ -55,7 +57,12 @@ class Cell(object):
 
     @value.setter
     def value(self, new_val):
+        self._raw_value = new_val
         self._value = clean_value(new_val, self.column_type, self._settings)
+
+    @property
+    def raw_value(self):
+        return self._raw_value
 
     def replace(self, old, new):
         if isinstance(self.value, str):

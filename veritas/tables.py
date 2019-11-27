@@ -41,12 +41,7 @@ class BaseTable(metaclass=ABCMeta):
     )
 
     def __init__(
-        self,
-        headers=None,
-        footers=None,
-        column_types=None,
-        name=None,
-        settings=None,
+        self, headers=None, footers=None, column_types=None, name=None, settings=None,
     ):
         self.headers = headers or []
         self.footers = footers or []
@@ -96,7 +91,7 @@ class BaseTable(metaclass=ABCMeta):
             }
             if table:
                 table = {hf(key): table[key] for key in table}
-        self._infer_types()
+        self._standardize_types()
         if table:
             self._table_data = table
         else:
@@ -104,7 +99,7 @@ class BaseTable(metaclass=ABCMeta):
         if cf:
             self.format_cells(cf)
         if not all(list(self.column_types.values())):
-            self.guess_types()
+            self.guess_types_from_data()
 
     @property
     def totals(self):
@@ -138,7 +133,7 @@ class BaseTable(metaclass=ABCMeta):
             else:
                 self.column_types[name] = None
                 if self.num_rows:
-                    self.guess_types()
+                    self.guess_types_from_data()
             self.num_cols += 1
         else:
             raise ValueError("shape of column does not match table")
@@ -164,7 +159,7 @@ class BaseTable(metaclass=ABCMeta):
         elif isinstance(row, Row):
             if row.headers == self.headers:
                 for cell in row:
-                    self._table_data[cell.header].append(cell.value)
+                    self._table_data[cell.header].append(cell.raw_value)
                 self.num_rows += 1
             else:
                 raise AttributeError("Columns do not match")
@@ -173,6 +168,7 @@ class BaseTable(metaclass=ABCMeta):
 
     def set_type(self, column, type_):
         self.column_types[column] = type_
+        self._standardize_types()
 
     def format_cells(self, cell_formatter, replace=True):
         arg_len = len(inspect.signature(cell_formatter).parameters)
@@ -238,7 +234,7 @@ class BaseTable(metaclass=ABCMeta):
             )
             self.headers[x] = formatter(self.headers[x])
 
-    def _infer_types(self):
+    def _standardize_types(self):
         for key, datatype in self.column_types.items():
             if isinstance(datatype, dict):
                 if "class" in datatype:
@@ -277,61 +273,64 @@ class BaseTable(metaclass=ABCMeta):
             elif "boo" in datatype:
                 self.column_types[key] = "bool"
 
-    def guess_types(self, guess_function=None):
+    def guess_types_from_data(self, guess_function=None):
         if guess_function:
             self.column_types = guess_function(self)
         else:
-            for cell in self[0]:
-                if self.column_types[cell.header] is None:
-                    val = str(cell.value)
-                    if ("/" in val or "-" in val) and ":" in val:
-                        self.column_types[cell.header] = "timestamp"
-                    elif (
-                        ("/" in val or "-" in val)
-                        and not re.search("[a-zA-Z]", val)
-                        and (len(val) == 10 or len(val) == 8)
-                        and val[0] != "-"
-                    ):
-                        self.column_types[cell.header] = "date"
-                    elif ":" in val:
-                        self.column_types[cell.header] = "time"
-                    elif "$" in val:
-                        self.column_types[cell.header] = "money"
-                    elif "%" in val:
-                        self.column_types[cell.header] = "percent"
-                    elif (
-                        "." in val
-                        and val.replace(".", "").replace("-", "").isdecimal()
-                        and val.count(".") == 1
-                    ):
-                        self.column_types[cell.header] = "numeric"
-                    elif val.replace("-", "").isnumeric() and (
-                        val.count("-") == 0 or (val.count("-") == 1 and val[1] == "-")
-                    ):
-                        type_string = "integer"
-                        col = self[cell.header]
-                        for col_cell in col:
-                            if col_cell.value is not None:
-                                col_cell_val = str(col_cell.value)
-                                if (
-                                    "." in col_cell_val
-                                    and col_cell_val.replace(".", "")
-                                    .replace("-", "")
-                                    .isdecimal()
-                                    and col_cell_val.count(".") == 1
-                                ):
-                                    type_string = "numeric"
-                                    break
-                                elif (
-                                    int(col_cell_val.replace(",", "")) < -2147483648
-                                    or int(col_cell_val.replace(",", "")) > 2147483647
-                                ):
-                                    type_string = "bigint"
-                                    break
-                        self.column_types[cell.header] = type_string
-                    else:
-                        self.column_types[cell.header] = "varchar"
-                        pass
+            if not self._settings.do_not_guess_types:
+                for cell in self[0]:
+                    if self.column_types[cell.header] is None:
+                        val = str(cell.value)
+                        if ("/" in val or "-" in val) and ":" in val:
+                            self.column_types[cell.header] = "timestamp"
+                        elif (
+                            ("/" in val or "-" in val)
+                            and not re.search("[a-zA-Z]", val)
+                            and (len(val) == 10 or len(val) == 8)
+                            and val[0] != "-"
+                        ):
+                            self.column_types[cell.header] = "date"
+                        elif ":" in val:
+                            self.column_types[cell.header] = "time"
+                        elif "$" in val:
+                            self.column_types[cell.header] = "money"
+                        elif "%" in val:
+                            self.column_types[cell.header] = "percent"
+                        elif (
+                            "." in val
+                            and val.replace(".", "").replace("-", "").isdecimal()
+                            and val.count(".") == 1
+                        ):
+                            self.column_types[cell.header] = "numeric"
+                        elif val.replace("-", "").isnumeric() and (
+                            val.count("-") == 0
+                            or (val.count("-") == 1 and val[1] == "-")
+                        ):
+                            type_string = "integer"
+                            col = self[cell.header]
+                            for col_cell in col:
+                                if col_cell.value is not None:
+                                    col_cell_val = str(col_cell.value)
+                                    if (
+                                        "." in col_cell_val
+                                        and col_cell_val.replace(".", "")
+                                        .replace("-", "")
+                                        .isdecimal()
+                                        and col_cell_val.count(".") == 1
+                                    ):
+                                        type_string = "numeric"
+                                        break
+                                    elif (
+                                        int(col_cell_val.replace(",", "")) < -2147483648
+                                        or int(col_cell_val.replace(",", ""))
+                                        > 2147483647
+                                    ):
+                                        type_string = "bigint"
+                                        break
+                            self.column_types[cell.header] = type_string
+                        else:
+                            self.column_types[cell.header] = "varchar"
+                            pass
 
     def rename_column(self, old_column, new_column):
         if self._has_column(old_column):
@@ -1213,7 +1212,7 @@ class CsvTable(BaseTable):
         footers=None,
         column_types=None,
         name=None,
-        settings=Settings(),
+        settings=None,
     ):
         super().__init__(headers, footers, column_types, name, settings)
         self.delimiter = delimiter
@@ -1272,7 +1271,7 @@ class ExcelTable(BaseTable):
         footers=None,
         column_types=None,
         name=None,
-        settings=Settings(),
+        settings=None,
     ):
         super().__init__(headers, footers, column_types, name, settings)
         self._setup(file_path)
@@ -1379,7 +1378,7 @@ class SqlAlcTable(BaseTable):
         footers=None,
         column_types=None,
         name=None,
-        settings=Settings(),
+        settings=None,
     ):
         super().__init__(None, footers, column_types, name, settings)
         self.query = query
@@ -1409,14 +1408,14 @@ class HtmlTable(BaseTable):
     def __init__(
         self,
         html,
-        parser=BeautifulSoupParser().parse,
+        parser=None,
         footers=None,
         column_types=None,
         name=None,
-        settings=Settings(),
+        settings=None,
     ):
         super().__init__(None, footers, column_types, name, settings)
-        self._parser = parser
+        self._parser = parser or BeautifulSoupParser().parse
         self._setup(html)
 
     def _setup(self, html):
@@ -1432,7 +1431,7 @@ class ListOfListsTable(BaseTable):
         footers=None,
         column_types=None,
         name=None,
-        settings=Settings(),
+        settings=None,
     ):
         super().__init__(headers, footers, column_types, name, settings)
         self._setup(lists)
@@ -1448,7 +1447,7 @@ class ListOfListsTable(BaseTable):
 
 class ListOfDictsTable(BaseTable):
     def __init__(
-        self, dicts, footers=None, column_types=None, name=None, settings=Settings()
+        self, dicts, footers=None, column_types=None, name=None, settings=None
     ):
         super().__init__(None, footers, column_types, name, settings)
         self._setup(dicts)
@@ -1467,14 +1466,54 @@ class ListOfDictsTable(BaseTable):
             self._initialize()
 
 
+LXML_TYPE_MAP = {
+    "IntElement": "integer",
+    "StringElement": "varchar",
+    "BoolElement": "bool",
+}
+
+
+class LxmlTable(BaseTable):
+    def __init__(
+        self, xml_obj, pyval=False, name=None, settings=None,
+    ):
+        super().__init__(None, None, None, name, settings)
+        self._setup(xml_obj)
+        self._pyval = pyval
+
+    def _setup(self, xml_obj):
+        headers = []
+        column_types = {}
+        for child in xml_obj[0].getchildren():
+            if child.tag not in headers:
+                headers.append(child.tag)
+                child_type = (
+                    str(type(child))
+                    .replace("<class 'lxml.objectify.", "")
+                    .replace("'>", "")
+                )
+                column_types[child.tag] = LXML_TYPE_MAP[child_type]
+        self._table_data["headers"] = headers
+        self._table_data["column_types"] = column_types
+        for row in xml_obj:
+            for header in headers:
+                if header not in self._table_data["table"]:
+                    self._table_data["table"][header] = []
+                try:
+                    if self._pyval:
+                        value = row[header].pyval
+                    else:
+                        value = row[header].text
+                except AttributeError:
+                    self._table_data["table"][header].append("")
+                else:
+                    self._table_data["table"][header].append(value)
+        self._initialize()
+
+
 class Table(BaseTable):
     def __init__(
-        self,
-        headers=None,
-        footers=None,
-        column_types=None,
-        name=None,
-        settings=Settings(),
+        self, headers=None, footers=None, column_types=None, name=None, settings=None,
     ):
         super().__init__(headers, footers, column_types, name, settings)
         self._setup(None)

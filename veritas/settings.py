@@ -14,6 +14,8 @@ class Settings:
         divide_percent=True,
         dont_format=(),
         empty_string_is_none=False,
+        clean_values=True,
+        do_not_guess_types=False,
     ):
         self.ignore_none = ignore_none
         self.datetime_format = datetime_format
@@ -28,3 +30,5 @@ class Settings:
         self.divide_percent = divide_percent
         self.dont_format = list(dont_format)
         self.empty_string_is_none = empty_string_is_none
+        self.clean_values = clean_values
+        self.do_not_guess_types = do_not_guess_types

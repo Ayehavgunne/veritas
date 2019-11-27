@@ -40,7 +40,7 @@ def sum_aggr(old, new, _):
 
 
 def clean_value(value, type_desc, settings):
-    if value:
+    if value and settings.clean_values:
         value = str(value)
         type_desc = str(type_desc).lower()
         if value == "-" and ("str" not in type_desc or "varchar" not in type_desc):
@@ -64,6 +64,11 @@ def clean_value(value, type_desc, settings):
         elif type_desc == "decimal" or type_desc == "numeric":
             return Decimal(value)
         elif type_desc == "bool":
+            if isinstance(value, str):
+                if value.lower() == "false":
+                    value = False
+                elif value.lower() == "true":
+                    value = True
             return bool(value)
         elif type_desc == "date":
             return parse_date_time_string(value, settings.date_format)

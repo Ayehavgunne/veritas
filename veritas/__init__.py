@@ -6,6 +6,7 @@ from .tables import (
     ListOfDictsTable,
     ListOfListsTable,
     SqlAlcTable,
+    LxmlTable,
     Table,
 )
 from .util import (
