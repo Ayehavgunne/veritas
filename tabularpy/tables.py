@@ -1484,15 +1484,16 @@ class LxmlTable(BaseTable):
     def _setup(self, xml_obj):
         headers = []
         column_types = {}
-        for child in xml_obj[0].getchildren():
-            if child.tag not in headers:
-                headers.append(child.tag)
-                child_type = (
-                    str(type(child))
-                    .replace("<class 'lxml.objectify.", "")
-                    .replace("'>", "")
-                )
-                column_types[child.tag] = LXML_TYPE_MAP[child_type]
+        if len(xml_obj):
+            for child in xml_obj[0].getchildren():
+                if child.tag not in headers:
+                    headers.append(child.tag)
+                    child_type = (
+                        str(type(child))
+                        .replace("<class 'lxml.objectify.", "")
+                        .replace("'>", "")
+                    )
+                    column_types[child.tag] = LXML_TYPE_MAP[child_type]
         self._table_data["headers"] = headers
         self._table_data["column_types"] = column_types
         for row in xml_obj:
