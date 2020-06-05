@@ -1,7 +1,9 @@
 import locale
 from decimal import InvalidOperation
 
-from . import Settings, col, row, tables
+from tabularpy import Settings, tables
+
+from . import col, row
 from .util import cast, clean_value, format_value
 
 locale.setlocale(locale.LC_ALL, "")

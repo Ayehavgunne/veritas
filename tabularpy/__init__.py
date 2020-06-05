@@ -5,8 +5,8 @@ from .tables import (
     HtmlTable,
     ListOfDictsTable,
     ListOfListsTable,
-    SqlAlcTable,
     LxmlTable,
+    SqlAlcTable,
     Table,
 )
 from .util import (

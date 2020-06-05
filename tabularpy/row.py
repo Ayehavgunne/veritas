@@ -1,8 +1,8 @@
 import inspect
 from decimal import Decimal
 
-from . import Settings
-from . import cell as c
+from tabularpy import Settings
+from tabularpy import cell as c
 
 
 class Row(object):
@@ -16,9 +16,7 @@ class Row(object):
         "_settings",
     )
 
-    def __init__(
-        self, cells, headers, column_types, row_num, parent, settings=None
-    ):
+    def __init__(self, cells, headers, column_types, row_num, parent, settings=None):
         self.cells = cells
         self.headers = headers
         self.column_types = column_types
@@ -29,6 +27,12 @@ class Row(object):
 
     def index(self, item):
         return self.cells.index(item)
+
+    def get(self, column, default=None):
+        if column in self.headers:
+            return self[column].value
+        else:
+            return default
 
     def format_cells(self, cell_formatter):
         arg_len = len(inspect.signature(cell_formatter).args)

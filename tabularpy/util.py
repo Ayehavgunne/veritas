@@ -456,13 +456,8 @@ class BeautifulSoupParser(object):
 
 def open_xls_as_xlsx(filename):
     try:
-        # noinspection PyUnresolvedReferences
         import xlrd
-
-        # noinspection PyUnresolvedReferences
         from openpyxl.workbook import Workbook
-
-        # noinspection PyUnresolvedReferences
         from openpyxl.reader.excel import load_workbook
 
         book = xlrd.open_workbook(filename)

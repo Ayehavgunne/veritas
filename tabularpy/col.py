@@ -1,7 +1,7 @@
 from decimal import Decimal
 
-from . import Settings
-from . import cell as cell_module
+from tabularpy import Settings
+from tabularpy import cell as cell_module
 
 
 class Col(object):
@@ -15,9 +15,7 @@ class Col(object):
         "_settings",
     )
 
-    def __init__(
-        self, cells, column_type, header, col_num, parent, settings=None
-    ):
+    def __init__(self, cells, column_type, header, col_num, parent, settings=None):
         self.cells = cells
         self.column_type = column_type
         self.header = header
@@ -28,6 +26,12 @@ class Col(object):
 
     def index(self, item):
         return self.cells.index(item)
+
+    def get(self, row, default=None):
+        if row < self._parent.num_rows:
+            return self[row].value
+        else:
+            return default
 
     def to_list(self):
         return self.cells
